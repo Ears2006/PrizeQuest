@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrizeQuest • Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0B1117;
+      color: #E7EEF1;
+      font-family: 'Exo 2', sans-serif;
+    }
+    .login-wrapper {
+      width: min(380px, 90vw);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .logo-ticket {
+      width: 120px;
+      height: 72px;
+      border-radius: 12px;
+      background: rgba(0, 255, 170, 0.06);
+      border: 1px solid rgba(0, 255, 170, 0.45);
+      box-shadow: 0 0 18px rgba(0, 255, 170, 0.35), inset 0 0 28px rgba(0, 255, 170, 0.12);
+      position: relative;
+    }
+    /* ticket cutouts */
+    .logo-ticket::before,
+    .logo-ticket::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 28px;
+      background: #0B1117;
+      border: 1px solid rgba(0, 255, 170, 0.3);
+      box-shadow: 0 0 10px rgba(0, 255, 170, 0.25);
+    }
+    .logo-ticket::before { left: -10px; border-right: none; border-radius: 8px 0 0 8px; }
+    .logo-ticket::after  { right: -10px; border-left: none;  border-radius: 0 8px 8px 0; }
+
+    h1 {
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 8px;
+    }
+    .input {
+      width: 100%;
+      padding: 12px 14px;
+      color: #E7EEF1;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(0, 255, 170, 0.28);
+      border-radius: 10px;
+      outline: none;
+      box-shadow: inset 0 0 0 rgba(0, 255, 170, 0), 0 0 0 rgba(0, 255, 170, 0);
+      transition: box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+    .input::placeholder { color: rgba(231, 238, 241, 0.6); }
+    .input:focus {
+      border-color: rgba(0, 255, 170, 0.55);
+      background: rgba(0, 255, 170, 0.03);
+      box-shadow: 0 0 14px rgba(0, 255, 170, 0.25), inset 0 0 10px rgba(0, 255, 170, 0.12);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px 16px;
+      margin-top: 6px;
+      border: 1px solid rgba(0, 255, 170, 0.38);
+      background: linear-gradient(180deg, rgba(0, 255, 170, 0.16), rgba(0, 255, 170, 0.08));
+      color: #E7EEF1;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      transition: box-shadow 180ms ease, transform 120ms ease, border-color 180ms ease;
+      box-shadow: 0 0 10px rgba(0, 255, 170, 0.18);
+    }
+    .btn:hover { box-shadow: 0 0 18px rgba(0, 255, 170, 0.35); }
+    .btn:active { transform: translateY(1px); }
+  </style>
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="logo-ticket" aria-label="PrizeQuest neon ticket logo"></div>
+    <h1>Welcome to PrizeQuest</h1>
+    <form class="form" autocomplete="on">
+      <input class="input" type="email" name="email" placeholder="Email" required />
+      <input class="input" type="password" name="password" placeholder="Password" required />
+      <label style="display:flex;align-items:center;gap:.5rem;">
+        <input id="modeToggle" type="checkbox" />
+        Create a new account
+      </label>
+      <a href="/auth/forgot.html" style="font-size:0.9rem;align-self:flex-end;color:rgba(231,238,241,0.8);text-decoration:none;">Forgot password?</a>
+      <button class="btn" id="authBtn" type="submit">Login</button>
+      <p id="authStatus" style="font-size:.9rem;opacity:.8;margin:6px 0 0;"></p>
+    </form>
+  </div>
+  <script type="module" src="./auth.js"></script>
+</body>
+</html>
+
+

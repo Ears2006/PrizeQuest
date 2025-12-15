@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrizeQuest • Profile</title>
+  <link rel="stylesheet" href="../style.css" />
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body.profile-body {
+      min-height: 100vh;
+      margin: 0;
+      background: #0B1117;
+      color: #E7EEF1;
+      font-family: 'Exo 2', sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+    .profile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px clamp(20px, 8vw, 48px);
+      background: rgba(9, 14, 20, 0.9);
+      border-bottom: 1px solid rgba(0, 255, 170, 0.25);
+      box-shadow: 0 8px 28px rgba(0, 255, 170, 0.08);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      backdrop-filter: blur(12px);
+    }
+    .profile-header__title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+    }
+    .profile-header__actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .profile-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 170, 0.35);
+      background: rgba(0, 255, 170, 0.08);
+      color: #E7EEF1;
+      font-weight: 600;
+      text-decoration: none;
+      letter-spacing: 0.4px;
+      transition: border-color 180ms ease, box-shadow 180ms ease, transform 160ms ease;
+      cursor: pointer;
+    }
+    .profile-link:hover {
+      border-color: rgba(0, 255, 170, 0.6);
+      box-shadow: 0 0 18px rgba(0, 255, 170, 0.28);
+    }
+    .profile-link:active {
+      transform: translateY(1px);
+    }
+
+    .profile-main {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding: clamp(24px, 7vw, 64px);
+      box-sizing: border-box;
+    }
+    .profile-card {
+      width: min(820px, 100%);
+      background: linear-gradient(145deg, rgba(18, 28, 38, 0.94), rgba(9, 16, 22, 0.92));
+      border: 1px solid rgba(0, 255, 170, 0.22);
+      border-radius: 20px;
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.45),
+        0 0 32px rgba(0, 255, 170, 0.08),
+        inset 0 0 18px rgba(0, 255, 170, 0.05);
+      padding: clamp(24px, 6vw, 44px);
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .profile-card__heading {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid rgba(0, 255, 170, 0.1);
+      padding-bottom: 14px;
+    }
+    .profile-card__heading h1 {
+      margin: 0;
+      font-size: clamp(1.6rem, 4vw, 2rem);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    #profileMode {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: rgba(0, 255, 170, 0.72);
+      letter-spacing: 0.35px;
+    }
+    .profile-grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .profile-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .profile-field label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: rgba(231, 238, 241, 0.82);
+      letter-spacing: 0.3px;
+    }
+    .profile-input,
+    .profile-select {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(0, 255, 170, 0.24);
+      color: #E7EEF1;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      transition: border-color 180ms ease, box-shadow 200ms ease, background 200ms ease;
+    }
+    .profile-input::placeholder {
+      color: rgba(231, 238, 241, 0.55);
+    }
+    .profile-input:focus,
+    .profile-select:focus {
+      outline: none;
+      border-color: rgba(0, 255, 170, 0.55);
+      background: rgba(0, 255, 170, 0.05);
+      box-shadow: 0 0 16px rgba(0, 255, 170, 0.32);
+    }
+    .profile-checkboxes {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 14px;
+      background: rgba(7, 12, 18, 0.85);
+      border: 1px solid rgba(0, 255, 170, 0.14);
+    }
+    .profile-checkboxes label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.92rem;
+      line-height: 1.45;
+      cursor: pointer;
+    }
+    .profile-checkboxes input[type="checkbox"] {
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+      accent-color: rgba(0, 255, 170, 0.8);
+    }
+    .profile-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .btn-primary,
+    .btn-secondary {
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-weight: 600;
+      letter-spacing: 0.35px;
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 200ms ease;
+    }
+    .btn-primary {
+      border: 1px solid rgba(0, 255, 170, 0.48);
+      background: linear-gradient(180deg, rgba(0, 255, 170, 0.28), rgba(0, 255, 170, 0.14));
+      color: #E7EEF1;
+      box-shadow: 0 0 18px rgba(0, 255, 170, 0.18);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 26px rgba(0, 255, 170, 0.42);
+    }
+    .btn-secondary {
+      background: rgba(12, 19, 26, 0.72);
+      border: 1px solid rgba(0, 255, 170, 0.22);
+      color: rgba(231, 238, 241, 0.82);
+    }
+    .btn-secondary:hover {
+      border-color: rgba(0, 255, 170, 0.45);
+      box-shadow: 0 0 18px rgba(0, 255, 170, 0.22);
+    }
+    .btn-primary:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .btn-primary:active,
+    .btn-secondary:active {
+      transform: translateY(1px);
+    }
+    .profile-status {
+      margin: 4px 0 0;
+      font-size: 0.9rem;
+      letter-spacing: 0.25px;
+      min-height: 1.2em;
+      color: rgba(231, 238, 241, 0.9);
+    }
+    .profile-status[data-type="error"] {
+      color: #ff8a8a;
+    }
+    .profile-status[data-type="success"] {
+      color: rgba(0, 255, 170, 0.82);
+    }
+
+    @media (max-width: 680px) {
+      .profile-header {
+        padding: 16px 20px;
+      }
+      .profile-header__actions {
+        gap: 8px;
+      }
+      .profile-link {
+        padding: 9px 14px;
+        font-size: 0.9rem;
+      }
+      .profile-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .profile-card {
+        padding: 24px;
+      }
+    }
+  </style>
+</head>
+<body class="profile-body">
+  <header class="profile-header">
+    <button id="homeBtn" class="profile-link" type="button">← Home</button>
+    <div class="profile-header__title">Profile</div>
+    <div class="profile-header__actions">
+      <button id="logoutBtn" class="profile-link" type="button">Logout</button>
+    </div>
+  </header>
+
+  <main class="profile-main">
+    <section class="profile-card">
+      <div class="profile-card__heading">
+        <h1>Tell us about you</h1>
+        <p id="profileMode">Create profile</p>
+      </div>
+
+      <form id="profileForm" autocomplete="on">
+        <div class="profile-grid">
+          <div class="profile-field">
+            <label for="firstName">First name</label>
+            <input id="firstName" class="profile-input" type="text" name="firstName" placeholder="First name" />
+          </div>
+          <div class="profile-field">
+            <label for="lastName">Last name</label>
+            <input id="lastName" class="profile-input" type="text" name="lastName" placeholder="Last name" />
+          </div>
+          <div class="profile-field">
+            <label for="birthdate">Birthdate</label>
+            <input id="birthdate" class="profile-input" type="date" name="birthdate" />
+          </div>
+          <div class="profile-field">
+            <label for="gender">Gender</label>
+            <select id="gender" class="profile-select" name="gender">
+              <option value="">Select</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="nonbinary">Non-binary</option>
+              <option value="other">Other</option>
+              <option value="prefer_not_say">Prefer not to say</option>
+            </select>
+          </div>
+          <div class="profile-field">
+            <label for="country">Country</label>
+            <input id="country" class="profile-input" type="text" name="country" value="US" />
+          </div>
+          <div class="profile-field">
+            <label for="state">State</label>
+            <input id="state" class="profile-input" type="text" name="state" placeholder="State or region" />
+          </div>
+          <div class="profile-field">
+            <label for="city">City</label>
+            <input id="city" class="profile-input" type="text" name="city" placeholder="City" />
+          </div>
+          <div class="profile-field">
+            <label for="zip">ZIP</label>
+            <input id="zip" class="profile-input" type="text" name="zip" placeholder="ZIP / Postal code" />
+          </div>
+        </div>
+
+        <div class="profile-checkboxes">
+          <label>
+            <input id="consentSurveys" type="checkbox" name="consentSurveys" />
+            I agree to receive survey invitations.
+          </label>
+          <label>
+            <input id="consentMarketing" type="checkbox" name="consentMarketing" />
+            I agree to receive marketing messages.
+          </label>
+        </div>
+
+        <div class="profile-actions">
+          <button id="saveProfileBtn" class="btn-primary" type="submit">Save Profile</button>
+          <button id="cancelBtn" class="btn-secondary" type="button">Cancel</button>
+        </div>
+        <p id="status" class="profile-status"></p>
+      </form>
+    </section>
+  </main>
+
+  <script type="module">
+    import { auth } from '../auth/firebase-config.js';
+    import {
+      onAuthStateChanged,
+      signOut,
+    } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
+    } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js';
+
+    const HOME_URL = '/index.html';
+    const LOGIN_URL = '/auth/login.html';
+
+    const db = getFirestore();
+
+    const form = document.getElementById('profileForm');
+    const statusEl = document.getElementById('status');
+    const profileMode = document.getElementById('profileMode');
+    const saveBtn = document.getElementById('saveProfileBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const homeBtn = document.getElementById('homeBtn');
+
+    let currentUser = null;
+    let isExistingProfile = false;
+    let hasLoadedOnce = false;
+
+    const fields = [
+      'firstName',
+      'lastName',
+      'birthdate',
+      'gender',
+      'country',
+      'state',
+      'city',
+      'zip',
+      'consentSurveys',
+      'consentMarketing',
+    ];
+
+    const setStatus = (message = '', type = 'info') => {
+      if (!statusEl) return;
+      statusEl.textContent = message;
+      statusEl.dataset.type = type;
+    };
+
+    const populateForm = (data) => {
+      if (!form) return;
+      fields.forEach((field) => {
+        const input = form.elements[field];
+        if (!input) return;
+        if (input.type === 'checkbox') {
+          input.checked = Boolean(data?.[field]);
+        } else if (field === 'country') {
+          input.value = data?.[field] ?? 'US';
+        } else {
+          input.value = data?.[field] ?? '';
+        }
+      });
+    };
+
+    const collectFormData = () => {
+      const result = {};
+      fields.forEach((field) => {
+        const input = form.elements[field];
+        if (!input) return;
+        if (input.type === 'checkbox') {
+          result[field] = input.checked;
+        } else {
+          result[field] = input.value.trim();
+        }
+      });
+      return result;
+    };
+
+    const loadProfile = async (uid) => {
+      if (!uid) {
+        console.warn('[Profile] loadProfile called without uid');
+        return;
+      }
+      setStatus('Loading profile…', 'info');
+      console.log('LOAD users/', uid);
+      try {
+        const docRef = doc(db, 'users', uid);
+        const snapshot = await getDoc(docRef);
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          console.log('LOAD users/ result:', { exists: true, data });
+          populateForm(data);
+          profileMode.textContent = 'Editing profile';
+          isExistingProfile = true;
+          setStatus('Profile loaded.', 'success');
+        } else {
+          console.log('LOAD users/ result:', { exists: false });
+          populateForm({ country: 'US' });
+          profileMode.textContent = 'Create profile';
+          isExistingProfile = false;
+          setStatus('Let’s get to know you.', 'info');
+        }
+      } catch (error) {
+        console.error('Profile load error:', error);
+        if (error?.code === 'permission-denied') {
+          setStatus('Missing or insufficient permissions', 'error');
+        } else {
+          setStatus(error?.message || 'Could not load profile. Please try again.', 'error');
+        }
+      } finally {
+        hasLoadedOnce = true;
+      }
+    };
+
+    const saveProfile = async (uid) => {
+      if (!uid || !form) return;
+      const formData = collectFormData();
+      const docRef = doc(db, 'users', uid);
+      const timestamp = Date.now();
+      const payload = {
+        ...formData,
+        updatedAt: timestamp,
+      };
+      console.log('SAVE users/', uid, payload);
+
+      try {
+        saveBtn.disabled = true;
+        setStatus('Saving profile…', 'info');
+        if (isExistingProfile) {
+          await updateDoc(docRef, payload);
+        } else {
+          await setDoc(
+            docRef,
+            {
+              ...payload,
+              createdAt: timestamp,
+              dailySurveyCount: 0,
+              dailySurveyLimit: 5,
+            },
+            { merge: true },
+          );
+        }
+        setStatus('Saved! Redirecting…', 'success');
+        setTimeout(() => {
+          window.location.href = HOME_URL;
+        }, 650);
+      } catch (error) {
+        console.error('Profile save error:', error);
+        if (error?.code === 'permission-denied') {
+          setStatus('Missing or insufficient permissions', 'error');
+        } else {
+          setStatus(error?.message || 'Failed to save profile. Please try again.', 'error');
+        }
+        saveBtn.disabled = false;
+      }
+    };
+
+    const redirectToLogin = () => {
+      console.log('[Profile] No authenticated user. Redirecting to login.');
+      setStatus('You’re not signed in. Redirecting…', 'error');
+      window.location.href = LOGIN_URL;
+    };
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        try {
+          await signOut(auth);
+        } catch (error) {
+          console.error('Error signing out', error);
+        } finally {
+          window.location.href = LOGIN_URL;
+        }
+      });
+    }
+
+    if (homeBtn) {
+      homeBtn.addEventListener('click', () => {
+        window.location.href = HOME_URL;
+      });
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        window.location.href = HOME_URL;
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!currentUser) {
+          redirectToLogin();
+          return;
+        }
+        await saveProfile(currentUser.uid);
+      });
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        redirectToLogin();
+        return;
+      }
+      currentUser = user;
+      console.log('[Profile] Authenticated user:', user.uid);
+      if (!hasLoadedOnce) {
+        void loadProfile(user.uid);
+      }
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="module">
+    import { auth } from '/auth/firebase-config.js';
+    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = '/auth/login.html';
+      }
+    });
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrizeQuest</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    #appRoot {
+      visibility: hidden;
+    }
+  </style>
+</head>
+<body class="dashboard">
+  <div id="appRoot">
+  <header class="pq-header">
+    <div class="pq-header__logo">
+      <div class="pq-logo-ticket" aria-label="PrizeQuest logo"></div>
+      <span class="pq-logo-text">PrizeQuest</span>
+    </div>
+    <div class="pq-header__user">
+      <div class="pq-user-icon" aria-label="User"></div>
+      <a href="profile/build.html" class="pq-btn" style="margin-left:10px; text-decoration: none; display: inline-block;">👤 Profile</a>
+    </div>
+  </header>
+
+  <nav class="pq-tabs" role="tablist" aria-label="Raffle periods">
+    <button class="pq-tab is-active" data-tab="home" role="tab" aria-selected="true">Home</button>
+    <button class="pq-tab" data-tab="daily" role="tab" aria-selected="false">Daily</button>
+    <button class="pq-tab" data-tab="weekly" role="tab" aria-selected="false">Weekly</button>
+    <button class="pq-tab" data-tab="monthly" role="tab" aria-selected="false">Monthly</button>
+    <button class="pq-tab" data-tab="quests" role="tab" aria-selected="false">Quests</button>
+  </nav>
+  <div class="pq-layout">
+    <div class="pq-main">
+      <!-- HOME TAB: two-column layout with Snake card (left) and Raffles (right) -->
+      <section class="pq-panel is-active" data-panel="home" role="tabpanel">
+        <div id="homeContainer" class="pq-home-grid">
+          <!-- Left: Snake card -->
+          <aside id="snakeCard" class="pq-snake-card">
+            <img src="./assets/snake-logo.svg" alt="Snake" class="pq-snake-logo" />
+            <p class="pq-snake-card__desc">Play Snake Mini-Game</p>
+            <button id="snakePlayCardBtn" class="pq-btn pq-btn--primary" onclick="window.showSnakeGame()">Play</button>
+          </aside>
+
+          <!-- Right: Raffles stacked -->
+          <div id="raffleColumn" class="pq-raffle-column" aria-label="Raffle overview">
+            <article id="card-daily" class="raffle-card raffle-card--with-image">
+              <div class="raffle-card__content">
+                <div class="raffle-card__image">
+                  <img src="https://m.media-amazon.com/images/G/01/gc/designs/livepreview/amazon_dkblue_noto_email_v2016_us-main._CB468775337_.png" 
+                       alt="$10 Amazon Gift Card" 
+                       class="prize-image" />
+                </div>
+                <div class="raffle-card__info">
+                  <h3 class="pq-summary__title">$10 Amazon Gift Card</h3>
+                  <p class="pq-summary__line">
+                    Entries: <span id="entries-daily">0</span>/<span id="cap-daily">150</span>
+                     • Remaining: <span id="remaining-daily">150</span>
+                  </p>
+                  <div class="pq-summary__progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="progress-daily" class="pq-summary__bar" style="width:0%"></div>
+                  </div>
+                  <div class="pq-summary__actions">
+                    <button id="survey-daily" class="pq-btn pq-btn--survey">Take Survey <span class="pq-survey-counter">(0/5)</span></button>
+                    <button id="buy-daily" class="pq-btn pq-btn--primary">Buy Ticket ($1.99)</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article id="card-weekly" class="raffle-card raffle-card--with-image">
+              <div class="raffle-card__content">
+                <div class="raffle-card__image">
+                  <img src="" 
+                       alt="$50 Gift Card" 
+                       class="prize-image" />
+                </div>
+                <div class="raffle-card__info">
+                  <h3 class="pq-summary__title">$50 Gift Card</h3>
+                  <p class="pq-summary__line">
+                    Entries: <span id="entries-weekly">0</span>/<span id="cap-weekly">500</span>
+                     • Remaining: <span id="remaining-weekly">500</span>
+                  </p>
+                  <div class="pq-summary__progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="progress-weekly" class="pq-summary__bar" style="width:0%"></div>
+                  </div>
+                  <div class="pq-summary__actions">
+                    <button id="survey-weekly" class="pq-btn pq-btn--survey">Take Survey <span class="pq-survey-counter">(0/5)</span></button>
+                    <button id="buy-weekly" class="pq-btn pq-btn--primary">Buy Ticket ($1.99)</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article id="card-monthly" class="raffle-card raffle-card--with-image">
+              <div class="raffle-card__content">
+                <div class="raffle-card__image">
+                  <img src="./images/switch.avif" 
+                       alt="Nintendo Switch OLED Model" 
+                       class="prize-image" />
+                </div>
+                <div class="raffle-card__info">
+                  <h3 class="pq-summary__title">Nintendo Switch OLED Model</h3>
+                  <p class="pq-summary__line">
+                    Entries: <span id="entries-monthly">0</span>/<span id="cap-monthly">5000</span>
+                     • Remaining: <span id="remaining-monthly">5000</span>
+                  </p>
+                  <div class="pq-summary__progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="progress-monthly" class="pq-summary__bar" style="width:0%"></div>
+                  </div>
+                  <div class="pq-summary__actions">
+                    <button id="survey-monthly" class="pq-btn pq-btn--survey">Take Survey <span class="pq-survey-counter">(0/5)</span></button>
+                    <button id="buy-monthly" class="pq-btn pq-btn--primary">Buy Ticket ($1.99)</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+      </section>
+
+      <!-- INDIVIDUAL RAFFLE TABS: one card each -->
+      <main class="pq-content">
+        <section class="pq-panel" data-panel="daily" role="tabpanel" hidden>
+          <h2>Daily Prize Draw</h2>
+          <div class="pq-cards">
+            <article id="card-daily-tab" class="pq-card pq-single-card pq-card--with-image" data-key="daily">
+              <div class="pq-card__image-wrapper">
+                <img src="https://m.media-amazon.com/images/G/01/gc/designs/livepreview/amazon_dkblue_noto_email_v2016_us-main._CB468775337_.png" 
+                     alt="$10 Amazon Gift Card" 
+                     class="pq-card__prize-image" />
+              </div>
+              <h3 class="pq-card__title">$10 Amazon Gift Card</h3>
+              <p class="pq-card__subtitle">Perfect for any purchase on Amazon.com</p>
+              <p class="pq-card__meta">Entries: <span id="entries-daily-tab">0</span>/<span id="cap-daily-tab">150</span> • Remaining: <span id="remaining-daily-tab">150</span></p>
+              <div class="pq-card__actions">
+                <button id="survey-daily-tab" class="pq-btn pq-btn--survey">Take Survey <span class="pq-survey-counter">(0/5)</span></button>
+                <button id="buy-daily-tab" class="pq-btn pq-btn--primary">Buy Ticket ($1.99)</button>
+              </div>
+              <div class="pq-progress" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="progress-daily-tab" class="pq-progress__bar js-progress" style="width:0%"></div>
+              </div>
+          </article>
+          </div>
+        </section>
+        <section class="pq-panel" data-panel="weekly" role="tabpanel" hidden>
+          <h2>Weekly Prize Draw</h2>
+          <div class="pq-cards">
+            <article id="card-weekly-tab" class="pq-card pq-single-card pq-card--with-image" data-key="weekly">
+              <div class="pq-card__image-wrapper">
+                <img src="" 
+                     alt="$50 Gift Card" 
+                     class="pq-card__prize-image" />
+              </div>
+              <h3 class="pq-card__title">$50 Gift Card</h3>
+              <p class="pq-card__meta">Entries: <span id="entries-weekly-tab">0</span>/<span id="cap-weekly-tab">500</span> • Remaining: <span id="remaining-weekly-tab">500</span></p>
+              <div class="pq-card__actions">
+                <button id="survey-weekly-tab" class="pq-btn pq-btn--survey">Take Survey <span class="pq-survey-counter">(0/5)</span></button>
+                <button id="buy-weekly-tab" class="pq-btn pq-btn--primary">Buy Ticket ($1.99)</button>
+              </div>
+              <div class="pq-progress" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="progress-weekly-tab" class="pq-progress__bar js-progress" style="width:0%"></div>
+              </div>
+            </article>
+          </div>
+        </section>
+        <section class="pq-panel" data-panel="monthly" role="tabpanel" hidden>
+          <h2>Monthly Prize Draw</h2>
+          <div class="pq-cards pq-cards--multi">
+            <!-- Nintendo Switch OLED -->
+            <article id="card-monthly-tab" class="pq-card pq-card--with-image" data-key="monthly">
+              <div class="pq-card__image-wrapper">
+                <img src="./images/switch.avif" 
+                     alt="Nintendo Switch OLED Model" 
+                     class="pq-card__prize-image" />
+              </div>
+              <h3 class="pq-card__title">Nintendo Switch OLED Model</h3>
+              <p class="pq-card__subtitle">7-inch OLED Screen • Enhanced Audio • 64GB Storage</p>
+              <p class="pq-card__meta">Entries: <span id="entries-monthly-tab">0</span>/<span id="cap-monthly-tab">5000</span> • Remaining: <span id="remaining-monthly-tab">5000</span></p>
+              <div class="pq-card__actions">
+                <button id="survey-monthly-tab" class="pq-btn pq-btn--survey">Take Survey <span class="pq-survey-counter">(0/5)</span></button>
+                <button id="buy-monthly-tab" class="pq-btn pq-btn--primary">Buy Ticket ($1.99)</button>
+              </div>
+              <div class="pq-progress" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="progress-monthly-tab" class="pq-progress__bar js-progress" style="width:0%"></div>
+              </div>
+            </article>
+
+            <!-- Xbox Series X - Coming Soon -->
+            <article id="card-xbox-tab" class="pq-card pq-card--with-image pq-card--coming-soon" data-key="xbox">
+              <div class="pq-card__coming-soon-overlay">
+                <span class="pq-card__coming-soon-text">Coming Soon</span>
+              </div>
+              <div class="pq-card__image-wrapper">
+                <img src="./images/xbox.png" 
+                     alt="Xbox Series X" 
+                     class="pq-card__prize-image" />
+              </div>
+              <h3 class="pq-card__title">Xbox Series X</h3>
+              <p class="pq-card__subtitle">1TB Storage • 4K Gaming • 120fps Performance</p>
+              <p class="pq-card__meta">Entries: <span id="entries-xbox-tab">0</span>/8000 • Remaining: <span id="remaining-xbox-tab">8000</span></p>
+              <div class="pq-card__actions">
+                <button id="buy-xbox-tab" class="pq-btn pq-btn--primary" disabled>Buy Ticket ($1.99)</button>
+              </div>
+              <div class="pq-progress" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="progress-xbox-tab" class="pq-progress__bar js-progress" style="width:0%"></div>
+              </div>
+            </article>
+
+            <!-- PlayStation 5 Slim Digital Edition - Coming Soon -->
+            <article id="card-ps5-tab" class="pq-card pq-card--with-image pq-card--coming-soon" data-key="ps5">
+              <div class="pq-card__coming-soon-overlay">
+                <span class="pq-card__coming-soon-text">Coming Soon</span>
+              </div>
+              <div class="pq-card__image-wrapper">
+                <img src="./images/ps5.avif" 
+                     alt="PlayStation 5 Slim Digital Edition" 
+                     class="pq-card__prize-image" />
+              </div>
+              <h3 class="pq-card__title">PlayStation 5 Slim Digital Edition</h3>
+              <p class="pq-card__subtitle">1TB SSD • Digital Games Only • Sleek Design</p>
+              <p class="pq-card__meta">Entries: <span id="entries-ps5-tab">0</span>/8000 • Remaining: <span id="remaining-ps5-tab">8000</span></p>
+              <div class="pq-card__actions">
+                <button id="buy-ps5-tab" class="pq-btn pq-btn--primary" disabled>Buy Ticket ($1.99)</button>
+              </div>
+              <div class="pq-progress" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="progress-ps5-tab" class="pq-progress__bar js-progress" style="width:0%"></div>
+              </div>
+            </article>
+          </div>
+        </section>
+        <section class="pq-panel" data-panel="quests" role="tabpanel" hidden>
+          <div class="pq-coming-soon">
+            <h2 class="pq-coming-soon__title">Quests Coming Soon</h2>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  
+      <!-- Snake Game Screen (hidden until activated) -->
+      <section id="snakeGameScreen" class="pq-snake-screen" hidden>
+        <div class="pq-snake-grid">
+          <div class="pq-snake-game-container">
+            <div class="pq-snake-game-stats">
+              <div class="pq-snake-stat">
+                <span class="pq-snake-stat__label">Level:</span>
+                <span id="snake-level-display" class="pq-snake-stat__value">1</span>
+              </div>
+              <div class="pq-snake-stat">
+                <span class="pq-snake-stat__label">Progress:</span>
+                <span id="snake-progress-display" class="pq-snake-stat__value">0/10</span>
+              </div>
+              <div class="pq-snake-stat">
+                <span class="pq-snake-stat__label">Score:</span>
+                <span id="snake-score-display" class="pq-snake-stat__value">0</span>
+              </div>
+            </div>
+            <div class="pq-snake-game-area">
+              <canvas id="snake-canvas" width="600" height="600" class="pq-snake-canvas-element"></canvas>
+              <div id="game-overlay" class="pq-snake-overlay">
+              <div class="pq-snake-start-screen">
+                <h3>Snake Game</h3>
+                <div class="pq-snake-mode-selector">
+                  <button id="level-mode-btn" class="pq-mode-btn pq-mode-btn--active" data-mode="level">
+                    <span class="pq-mode-btn__title">Level Mode</span>
+                    <span class="pq-mode-btn__desc">4 levels, earn rewards</span>
+                  </button>
+                  <button id="unlimited-mode-btn" class="pq-mode-btn" data-mode="unlimited">
+                    <span class="pq-mode-btn__title">Unlimited Mode</span>
+                    <span class="pq-mode-btn__desc">Play until crash, save high score</span>
+                  </button>
+                </div>
+                <p>Use arrow keys or WASD to move</p>
+                <button id="start-game-btn" class="pq-btn pq-btn--primary">Start Game</button>
+              </div>
+              <div id="start-level-screen" class="pq-snake-level-start" style="display: none;">
+                <div class="pq-level-start-content">
+                  <h3 id="start-level-text" class="pq-level-start__title">Level 1</h3>
+                  <p class="pq-level-start__message">Get ready!</p>
+                  <p class="pq-level-start__goal">Collect 10 apples to complete this level</p>
+                  <button id="start-level-btn" class="pq-btn pq-btn--primary pq-btn--large">Start Level</button>
+                  <button id="back-to-home-btn-level" class="pq-btn pq-btn--secondary">Back to Home</button>
+                </div>
+              </div>
+              <div id="countdown-screen" class="pq-snake-countdown" style="display: none;">
+                <div id="countdown-number" class="pq-countdown-number">3</div>
+              </div>
+              <div id="game-over-screen" class="pq-snake-game-over" style="display: none;">
+                <h3>Game Over!</h3>
+                <p>Final Score: <span id="final-score">0</span></p>
+                <div class="pq-snake-game-over__actions">
+                  <button id="play-again-btn" class="pq-btn">Play Again</button>
+                  <button id="back-to-home-btn" class="pq-btn">Back to Home</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+      <div class="pq-snake-leaderboard">
+        <h3>Snake Leaderboard</h3>
+        <table class="pq-table" aria-label="Snake Leaderboard">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Username</th>
+              <th>High Score</th>
+            </tr>
+          </thead>
+          <tbody id="snake-leaderboard-body">
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="pq-snake-footer">
+      <button id="backHomeBtn" class="pq-btn">Back to Home</button>
+    </div>
+  </section>
+  <!-- Level Complete Modal -->
+  <div id="level-complete-modal" class="pq-modal" hidden>
+    <div class="pq-modal__overlay"></div>
+    <div class="pq-modal__card" role="dialog" aria-modal="true">
+      <h3 class="pq-modal__title">🎉 Level Complete!</h3>
+      <p class="pq-modal__message">Great job! You collected all 10 apples.</p>
+      <p class="pq-modal__message pq-modal__message--small">Continue to the next level!</p>
+      <div class="pq-modal__actions">
+        <button id="level-continue-btn" class="pq-btn pq-btn--primary">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entry Earned Modal -->
+  <div id="entry-earned-modal" class="pq-modal" hidden>
+    <div class="pq-modal__overlay"></div>
+    <div class="pq-modal__card pq-modal__card--success" role="dialog" aria-modal="true">
+      <div class="pq-modal__icon">🎊</div>
+      <h3 class="pq-modal__title">Congratulations!</h3>
+      <p class="pq-modal__message pq-modal__message--large">You earned 1 PrizeQuest Entry!</p>
+      <p class="pq-modal__message pq-modal__message--small">Completed 4 levels successfully</p>
+      <div class="pq-modal__actions">
+        <button id="claim-entry-btn" class="pq-btn pq-btn--primary">Claim Entry</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ticket Choice Modal -->
+  <div id="ticket-modal" class="pq-modal" hidden>
+    <div id="ticket-modal-overlay" class="pq-modal__overlay"></div>
+    <div class="pq-modal__card" role="dialog" aria-modal="true" aria-labelledby="ticket-modal-title">
+      <h3 id="ticket-modal-title">Which Prize Draw do you want to apply your entry to?</h3>
+      <div class="pq-modal__actions">
+        <button id="choose-daily" class="pq-btn">Daily ($10 Amazon Gift Card)</button>
+        <button id="choose-weekly" class="pq-btn">Weekly ($50 Gift Card)</button>
+        <button id="choose-monthly" class="pq-btn pq-btn--primary">Monthly (Nintendo Switch OLED)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Survey Complete Modal -->
+  <div id="survey-complete-modal" class="pq-modal" hidden>
+    <div class="pq-modal__overlay"></div>
+    <div class="pq-modal__card pq-modal__card--success" role="dialog" aria-modal="true">
+      <div class="pq-modal__icon">📋</div>
+      <h3 class="pq-modal__title">Survey Complete!</h3>
+      <div id="survey-complete-message">
+        <p class="pq-modal__message pq-modal__message--large">Thanks for your feedback!</p>
+      </div>
+      <div class="pq-modal__actions">
+        <button id="close-survey-modal" class="pq-btn pq-btn--primary">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  </div>
+  <script src="/snake-game.js"></script>
+  <script type="module" src="/script.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Check your email</title>
+</head>
+<body>
+  <h2>Verify your email</h2>
+  <p id="status">We sent a verification link to your email. After you click it, return here and press “I’ve verified”.</p>
+  <div style="display:flex;gap:12px;margin-top:12px;">
+    <button id="verifiedBtn">I’ve verified</button>
+    <button id="resendBtn">Resend email</button>
+  </div>
+
+  <script type="module">
+    import { auth } from '../firebase-config.js';
+    import {
+      onAuthStateChanged,
+      reload,
+      sendEmailVerification,
+    } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+
+    const statusEl = document.getElementById('status');
+    const verifiedBtn = document.getElementById('verifiedBtn');
+    const resendBtn = document.getElementById('resendBtn');
+
+    const PROFILE_URL = '/profile/build.html';
+    const POLL_INTERVAL_MS = 2000;
+    const RESEND_COOLDOWN_MS = 30000;
+
+    let pollTimerId = null;
+
+    const updateStatus = (message) => {
+      if (statusEl) {
+        statusEl.textContent = message;
+      }
+    };
+
+    const goProfile = () => {
+      location.href = PROFILE_URL;
+    };
+
+    const navigateLogin = () => {
+      updateStatus('You’re not signed in.');
+      location.href = '/auth/login.html';
+    };
+
+    const sendVerificationEmail = async (user) => {
+      try {
+        const returnUrl = `${location.origin}${PROFILE_URL.startsWith('/') ? PROFILE_URL : `/${PROFILE_URL}`}`;
+        await sendEmailVerification(user, { url: returnUrl });
+        updateStatus('Verification email re-sent. Check your inbox.');
+        resendBtn.disabled = true;
+        setTimeout(() => {
+          resendBtn.disabled = false;
+        }, RESEND_COOLDOWN_MS);
+      } catch (error) {
+        console.error('Verification resend error:', error);
+        updateStatus(error?.message || 'Could not resend right now. Try again.');
+        resendBtn.disabled = false;
+      }
+    };
+
+    const clearPoll = () => {
+      if (pollTimerId) {
+        clearInterval(pollTimerId);
+        pollTimerId = null;
+      }
+    };
+
+    const checkVerification = async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        navigateLogin();
+        return false;
+      }
+      try {
+        await reload(user);
+      } catch (error) {
+        console.error('Reload error:', error);
+        updateStatus('Could not refresh your status. Retrying...');
+        return false;
+      }
+
+      if (user.emailVerified) {
+        clearPoll();
+        updateStatus('Verified! Redirecting…');
+        goProfile();
+        return true;
+      }
+
+      return false;
+    };
+
+    const startPoll = () => {
+      if (pollTimerId) {
+        return;
+      }
+      pollTimerId = setInterval(() => {
+        void checkVerification();
+      }, POLL_INTERVAL_MS);
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        navigateLogin();
+        return;
+      }
+
+      if (user.emailVerified) {
+        clearPoll();
+        goProfile();
+        return;
+      }
+
+      updateStatus('Waiting for verification. Click the link in your email, then return here.');
+      startPoll();
+    });
+
+    verifiedBtn.addEventListener('click', async () => {
+      verifiedBtn.disabled = true;
+      updateStatus('Checking verification…');
+      try {
+        const verified = await checkVerification();
+        if (!verified) {
+          updateStatus('Still not verified. Click the link in your email, then try again.');
+        }
+      } finally {
+        verifiedBtn.disabled = false;
+      }
+    });
+
+    resendBtn.addEventListener('click', async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        navigateLogin();
+        return;
+      }
+
+      resendBtn.disabled = true;
+      updateStatus('Sending verification email…');
+      await sendVerificationEmail(user);
+    });
+  </script>
+</body>
+</html>
+

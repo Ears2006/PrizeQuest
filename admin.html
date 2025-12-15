@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - PrizeQuest</title>
+  <!-- ADMIN ACCESS ENFORCEMENT: Firebase Auth guard runs before page render to prevent flash -->
+  <script type="module">
+    import { auth } from '/auth/firebase-config.js';
+    import { onAuthStateChanged, getIdTokenResult } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+    
+    // Hide all content until auth check completes (prevents flash)
+    document.documentElement.style.visibility = 'hidden';
+    
+    /**
+     * ADMIN ACCESS ENFORCEMENT
+     * 
+     * This page is protected by Firebase Auth role verification.
+     * Access is granted only if:
+     * 1. User is authenticated with Firebase Auth
+     * 2. User has admin role via Firebase custom claims (admin: true) OR
+     *    User email is in the admin whitelist (fallback if custom claims not set up)
+     * 
+     * Non-authenticated users → Redirect to login
+     * Authenticated non-admin users → Redirect to home (appears as "Not Found")
+     * 
+     * This check runs before any page content is rendered to prevent information leakage.
+     */
+    
+    // Admin email whitelist (fallback if custom claims not configured)
+    // TODO: Replace with Firebase custom claims for production (requires Cloud Functions)
+    const ADMIN_EMAILS = [
+      // Add admin emails here as fallback
+      // Example: 'admin@prizequest.com'
+    ];
+    
+    async function checkAdminAccess(user) {
+      if (!user) {
+        return false;
+      }
+      
+      try {
+        // First, try to get custom claims (preferred method)
+        const tokenResult = await getIdTokenResult(user);
+        if (tokenResult.claims?.admin === true) {
+          return true;
+        }
+        
+        // Fallback: Check email whitelist if custom claims not set up
+        if (ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(user.email)) {
+          return true;
+        }
+        
+        return false;
+      } catch (error) {
+        console.error('Error checking admin access:', error);
+        return false;
+      }
+    }
+    
+    // Auth state listener - runs immediately on page load
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        // Not authenticated → redirect to login
+        window.location.href = '/auth/login.html';
+        return;
+      }
+      
+      // Check if user has admin role
+      const isAdmin = await checkAdminAccess(user);
+      
+      if (!isAdmin) {
+        // Authenticated but not admin → redirect to home (appears as "Not Found")
+        window.location.href = '/dashboard.html';
+        return;
+      }
+      
+      // User is authenticated and has admin role → show page
+      document.documentElement.style.visibility = 'visible';
+    });
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #0B1117;
+      color: #E7EEF1;
+      font-family: 'Exo 2', sans-serif;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    /* ADMIN ACCESS ENFORCEMENT: Hide page until Firebase Auth verification completes */
+    html {
+      visibility: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid rgba(0, 255, 170, 0.16);
+      background: rgba(255, 255, 255, 0.02);
+      box-shadow: 0 2px 14px rgba(0, 255, 170, 0.06);
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+
+    .admin-header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: rgba(0, 255, 170, 0.95);
+      text-shadow: 0 0 20px rgba(0, 255, 170, 0.6);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+
+    /* Buttons */
+    .btn {
+      padding: 12px 24px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 1px solid rgba(231, 238, 241, 0.18);
+      background: transparent;
+      color: #E7EEF1;
+      transition: box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .btn:hover {
+      box-shadow: 0 0 10px rgba(231, 238, 241, 0.15);
+    }
+
+    .btn-primary {
+      border-color: rgba(0, 255, 170, 0.45);
+      background: rgba(0, 255, 170, 0.05);
+      box-shadow: 0 0 12px rgba(0, 255, 170, 0.20), inset 0 0 8px rgba(0, 255, 170, 0.08);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 16px rgba(0, 255, 170, 0.32);
+    }
+
+    .btn-secondary {
+      border-color: rgba(231, 238, 241, 0.3);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-danger {
+      border-color: rgba(255, 70, 70, 0.45);
+      background: rgba(255, 70, 70, 0.05);
+      box-shadow: 0 0 12px rgba(255, 70, 70, 0.20);
+    }
+
+    .btn-danger:hover {
+      box-shadow: 0 0 16px rgba(255, 70, 70, 0.32);
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: rgba(0, 255, 170, 0.9);
+      text-shadow: 0 0 8px rgba(0, 255, 170, 0.3);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 255, 170, 0.28);
+      background: rgba(255, 255, 255, 0.02);
+      color: #E7EEF1;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 1rem;
+      box-shadow: 0 0 8px rgba(0, 255, 170, 0.1), inset 0 0 6px rgba(0, 255, 170, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: rgba(0, 255, 170, 0.6);
+      box-shadow: 0 0 16px rgba(0, 255, 170, 0.25);
+    }
+
+    .file-input {
+      cursor: pointer;
+      padding: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .file-input:hover {
+      border-color: rgba(0, 255, 170, 0.5);
+    }
+
+    .file-input::file-selector-button {
+      background: rgba(0, 255, 170, 0.15);
+      border: 1px solid rgba(0, 255, 170, 0.45);
+      color: rgba(0, 255, 170, 0.95);
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Exo 2', sans-serif;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      text-shadow: 0 0 8px rgba(0, 255, 170, 0.3);
+      margin-right: 10px;
+    }
+
+    .file-input::file-selector-button:hover {
+      background: rgba(0, 255, 170, 0.25);
+      box-shadow: 0 0 15px rgba(0, 255, 170, 0.4);
+      transform: translateY(-2px);
+    }
+
+    /* Prize Cards */
+    .prize-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 24px;
+      margin-top: 30px;
+    }
+
+    .prize-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(0, 255, 170, 0.28);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 0 12px rgba(0, 255, 170, 0.10), inset 0 0 10px rgba(0, 255, 170, 0.06);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .prize-card:hover {
+      box-shadow: 0 0 20px rgba(0, 255, 170, 0.20), inset 0 0 15px rgba(0, 255, 170, 0.10);
+    }
+
+    .prize-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: rgba(0, 255, 170, 0.95);
+      text-shadow: 0 0 15px rgba(0, 255, 170, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .prize-preview {
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      border: 1px solid rgba(0, 255, 170, 0.15);
+      text-align: center;
+      min-height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .prize-preview img {
+      max-width: 140px;
+      max-height: 140px;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 2px solid rgba(0, 255, 170, 0.35);
+      box-shadow: 0 0 20px rgba(0, 255, 170, 0.3);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .prize-preview.empty {
+      color: rgba(0, 255, 170, 0.4);
+      font-style: italic;
+    }
+
+    .prize-preview-placeholder {
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(231, 238, 241, 0.5);
+      font-style: italic;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .button-group button {
+      flex: 1;
+    }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 17, 23, 0.8);
+      backdrop-filter: blur(5px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: rgba(255, 255, 255, 0.02);
+      border: 2px solid rgba(0, 255, 170, 0.4);
+      border-radius: 14px;
+      padding: 40px;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 0 40px rgba(0, 255, 170, 0.3);
+      animation: modalAppear 0.3s ease-out;
+    }
+
+    @keyframes modalAppear {
+      from {
+        transform: scale(0.9);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .modal-icon {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      animation: iconBounce 0.6s ease-out;
+    }
+
+    @keyframes iconBounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+
+    .modal-title {
+      font-size: 1.8rem;
+      margin-bottom: 15px;
+      color: rgba(0, 255, 170, 0.95);
+      text-shadow: 0 0 15px rgba(0, 255, 170, 0.5);
+    }
+
+    .modal-message {
+      margin-bottom: 25px;
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+
+    /* Stats Section */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(0, 255, 170, 0.28);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 0 10px rgba(0, 255, 170, 0.08);
+    }
+
+    .stat-card h4 {
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .stat-card .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: rgba(0, 255, 170, 0.95);
+      text-shadow: 0 0 10px rgba(0, 255, 170, 0.5);
+    }
+
+    /* Hidden class */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .prize-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-header {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .admin-header h1 {
+        font-size: 1.5rem;
+      }
+    }
+
+    /* Admin Mode Toggle Switch */
+    .admin-toggle {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+
+    .admin-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .admin-toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(0, 255, 170, 0.3);
+      transition: 0.4s;
+      border-radius: 34px;
+    }
+
+    .admin-toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 2px;
+      background-color: rgba(0, 255, 170, 0.5);
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+
+    .admin-toggle input:checked + .admin-toggle-slider {
+      background-color: rgba(0, 255, 170, 0.2);
+      border-color: rgba(0, 255, 170, 0.8);
+      box-shadow: 0 0 20px rgba(0, 255, 170, 0.5);
+    }
+
+    .admin-toggle input:checked + .admin-toggle-slider:before {
+      transform: translateX(26px);
+      background-color: rgba(0, 255, 170, 1);
+      box-shadow: 0 0 10px rgba(0, 255, 170, 0.8);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Admin Dashboard -->
+    <!-- ADMIN ACCESS ENFORCEMENT: Content only visible after Firebase Auth admin verification -->
+    <div id="adminDashboard">
+      <!-- Header -->
+      <div class="admin-header">
+        <h1>🎮 Admin Dashboard</h1>
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="resetRaffleCycle()" style="margin-right: 10px;">
+            🔄 Reset Raffle Cycle
+          </button>
+          <button class="btn btn-secondary" onclick="window.location.href='index.html'">
+            View App
+          </button>
+          <button class="btn btn-danger" onclick="logout()">
+            Logout
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin Mode Toggle -->
+      <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(0, 255, 170, 0.28); border-radius: 12px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <h3 style="font-size: 1.2rem; margin-bottom: 8px; color: rgba(0, 255, 170, 0.95);">🎮 Admin Mode</h3>
+            <p style="font-size: 0.9rem; opacity: 0.7; margin: 0;">When enabled, you can play the claw game manually. When disabled, drawings run automatically with random winners.</p>
+          </div>
+          <label class="admin-toggle">
+            <input type="checkbox" id="adminModeToggle" onchange="toggleAdminMode()">
+            <span class="admin-toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Stats Overview -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h4>Total Entries</h4>
+          <div class="stat-value" id="statTotalEntries">0</div>
+        </div>
+        <div class="stat-card">
+          <h4>Active Prizes</h4>
+          <div class="stat-value">3</div>
+        </div>
+        <div class="stat-card">
+          <h4>Surveys Completed</h4>
+          <div class="stat-value" id="statTotalSurveys">0</div>
+        </div>
+      </div>
+
+      <!-- Prize Management -->
+      <div class="prize-grid">
+        <!-- Daily Prize -->
+        <div class="prize-card">
+          <h3>📅 Daily Prize</h3>
+          <form id="dailyForm">
+            <div class="form-group">
+              <label>Prize Name</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="daily-name" 
+                value="$10 Amazon Gift Card"
+              />
+            </div>
+            <div class="form-group">
+              <label>Prize Value</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="daily-value" 
+                value="$10"
+              />
+            </div>
+            <div class="form-group">
+              <label>Prize Image</label>
+              <input 
+                type="file" 
+                class="form-control file-input" 
+                id="daily-image" 
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onchange="handleImageUpload('daily', this)"
+              />
+              <small style="color: rgba(0, 255, 170, 0.6); margin-top: 5px; display: block;">
+                Upload an image (.png, .jpg, .jpeg, .webp) or leave empty to keep current image
+              </small>
+            </div>
+            <div class="form-group">
+              <label>Max Entries (Cap)</label>
+              <input 
+                type="number" 
+                class="form-control" 
+                id="daily-cap" 
+                value="150"
+                min="1"
+              />
+            </div>
+            <div class="prize-preview">
+              <img id="daily-preview" src="" alt="Prize preview" />
+            </div>
+            <div class="button-group">
+              <button type="submit" class="btn btn-primary">💾 Save</button>
+              <button type="button" class="btn btn-secondary" onclick="resetPrize('daily')">
+                🔄 Reset
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Weekly Prize -->
+        <div class="prize-card">
+          <h3>📆 Weekly Prize</h3>
+          <form id="weeklyForm">
+            <div class="form-group">
+              <label>Prize Name</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="weekly-name" 
+                value="$50 Gift Card"
+              />
+            </div>
+            <div class="form-group">
+              <label>Prize Value</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="weekly-value" 
+                value="$50"
+              />
+            </div>
+            <div class="form-group">
+              <label>Prize Image</label>
+              <input 
+                type="file" 
+                class="form-control file-input" 
+                id="weekly-image" 
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onchange="handleImageUpload('weekly', this)"
+              />
+              <small style="color: rgba(0, 255, 170, 0.6); margin-top: 5px; display: block;">
+                Upload an image (.png, .jpg, .jpeg, .webp) or leave empty to keep current image
+              </small>
+            </div>
+            <div class="form-group">
+              <label>Max Entries (Cap)</label>
+              <input 
+                type="number" 
+                class="form-control" 
+                id="weekly-cap" 
+                value="500"
+                min="1"
+              />
+            </div>
+            <div class="prize-preview">
+              <img id="weekly-preview" src="" alt="Prize preview" />
+            </div>
+            <div class="button-group">
+              <button type="submit" class="btn btn-primary">💾 Save</button>
+              <button type="button" class="btn btn-secondary" onclick="resetPrize('weekly')">
+                🔄 Reset
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Monthly Prize -->
+        <div class="prize-card">
+          <h3>📅 Monthly Prize</h3>
+          <form id="monthlyForm">
+            <div class="form-group">
+              <label>Prize Name</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="monthly-name" 
+                value="Nintendo Switch OLED Model"
+              />
+            </div>
+            <div class="form-group">
+              <label>Prize Value</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="monthly-value" 
+                value="$349.99"
+              />
+            </div>
+            <div class="form-group">
+              <label>Prize Image</label>
+              <input 
+                type="file" 
+                class="form-control file-input" 
+                id="monthly-image" 
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onchange="handleImageUpload('monthly', this)"
+              />
+              <small style="color: rgba(0, 255, 170, 0.6); margin-top: 5px; display: block;">
+                Upload an image (.png, .jpg, .jpeg, .webp) or leave empty to keep current image
+              </small>
+            </div>
+            <div class="form-group">
+              <label>Max Entries (Cap)</label>
+              <input 
+                type="number" 
+                class="form-control" 
+                id="monthly-cap" 
+                value="5000"
+                min="1"
+              />
+            </div>
+            <div class="prize-preview">
+              <img id="monthly-preview" src="" alt="Prize preview" />
+            </div>
+            <div class="button-group">
+              <button type="submit" class="btn btn-primary">💾 Save</button>
+              <button type="button" class="btn btn-secondary" onclick="resetPrize('monthly')">
+                🔄 Reset
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div id="successModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-icon">✅</div>
+      <div class="modal-title">Success!</div>
+      <div class="modal-message" id="successMessage">Prize updated successfully!</div>
+      <button class="btn btn-primary" onclick="closeModal()">Continue</button>
+    </div>
+  </div>
+
+  <script type="module">
+    // ADMIN ACCESS ENFORCEMENT: This script only runs after Firebase Auth admin verification passes
+    import { auth } from '/auth/firebase-config.js';
+    import { signOut } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+
+    // Store Base64 images in memory (keyed by prize type)
+    const uploadedImages = {
+      daily: null,
+      weekly: null,
+      monthly: null
+    };
+
+    // Default prize configurations
+    const DEFAULT_PRIZES = {
+      daily: {
+        name: "$10 Amazon Gift Card",
+        value: "$10",
+        image: "https://m.media-amazon.com/images/G/01/gc/designs/livepreview/amazon_dkblue_noto_email_v2016_us-main._CB468775337_.png",
+        cap: 150
+      },
+      weekly: {
+        name: "$50 Gift Card",
+        value: "$50",
+        image: "",
+        cap: 500
+      },
+      monthly: {
+        name: "Nintendo Switch OLED Model",
+        value: "$349.99",
+        image: "./images/switch.avif",
+        cap: 5000
+      }
+    };
+
+    // Initialize dashboard (runs after Firebase Auth admin verification)
+    function initDashboard() {
+      loadPrizeData();
+      loadStats();
+      updatePreviews();
+      loadAdminModeState();
+    }
+    
+    // Load Admin Mode State
+    function loadAdminModeState() {
+      const isAdminMode = localStorage.getItem('isAdminMode') === 'true';
+      const toggle = document.getElementById('adminModeToggle');
+      if (toggle) {
+        toggle.checked = isAdminMode;
+      }
+    }
+    
+    // Toggle Admin Mode
+    function toggleAdminMode() {
+      const toggle = document.getElementById('adminModeToggle');
+      const isEnabled = toggle.checked;
+      
+      if (isEnabled) {
+        localStorage.setItem('isAdminMode', 'true');
+        console.log('Admin Mode ENABLED - You can play the claw game manually');
+      } else {
+        localStorage.setItem('isAdminMode', 'false');
+        console.log('Admin Mode DISABLED - Random winners will be shown');
+      }
+      
+      showSuccess(isEnabled ? 
+        'Admin Mode enabled! You can now play the claw game manually.' : 
+        'Admin Mode disabled. Random winners will be shown to users.');
+    }
+
+    // Logout - ADMIN ACCESS ENFORCEMENT: Uses Firebase signOut
+    async function logout() {
+      try {
+        // Clear admin mode on logout
+        localStorage.setItem('isAdminMode', 'false');
+        // Sign out from Firebase Auth
+        await signOut(auth);
+        // Redirect to login page
+        window.location.href = '/auth/login.html';
+      } catch (error) {
+        console.error('Error signing out:', error);
+        // Still redirect even if signOut fails
+        window.location.href = '/auth/login.html';
+      }
+    }
+    
+    // Make logout available globally
+    window.logout = logout;
+    
+    // Initialize dashboard when page loads (after Firebase Auth verification)
+    initDashboard();
+
+    // Load prize data from localStorage
+    function loadPrizeData() {
+      ['daily', 'weekly', 'monthly'].forEach(type => {
+        const stored = localStorage.getItem(`prize_${type}`);
+        const prizeData = stored ? JSON.parse(stored) : DEFAULT_PRIZES[type];
+
+        document.getElementById(`${type}-name`).value = prizeData.name || '';
+        document.getElementById(`${type}-value`).value = prizeData.value || '';
+        document.getElementById(`${type}-cap`).value = prizeData.cap || 0;
+        
+        // Load and display existing image (including Base64)
+        if (prizeData.image) {
+          uploadedImages[type] = prizeData.image;
+          const previewImg = document.getElementById(`${type}-preview`);
+          if (previewImg) {
+            previewImg.src = prizeData.image;
+            previewImg.style.display = 'block';
+          }
+        }
+      });
+    }
+
+    // Load stats
+    function loadStats() {
+      const raffleState = localStorage.getItem('raffleState');
+      if (raffleState) {
+        try {
+          const raffles = JSON.parse(raffleState);
+          const totalEntries = (raffles.daily?.entries || 0) + 
+                              (raffles.weekly?.entries || 0) + 
+                              (raffles.monthly?.entries || 0);
+          const totalSurveys = (raffles.daily?.surveyCount || 0) + 
+                              (raffles.weekly?.surveyCount || 0) + 
+                              (raffles.monthly?.surveyCount || 0);
+          
+          document.getElementById('statTotalEntries').textContent = totalEntries;
+          document.getElementById('statTotalSurveys').textContent = totalSurveys;
+        } catch (e) {
+          console.error('Failed to load stats:', e);
+        }
+      }
+    }
+
+    // Update image previews (no longer needed for file inputs)
+    function updatePreviews() {
+      // Preview updates are now handled by handleImageUpload
+      // This function is kept for compatibility with existing code
+    }
+
+    // Handle image upload
+    function handleImageUpload(type, input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      // Validate file type - only allow specific formats
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a valid image file (.png, .jpg, .jpeg, or .webp)');
+        input.value = '';
+        return;
+      }
+
+      // Validate file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Image file size must be less than 2MB');
+        input.value = '';
+        return;
+      }
+
+      // Read and convert to Base64
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64String = e.target.result;
+        
+        // Store in memory
+        uploadedImages[type] = base64String;
+        
+        // Update preview immediately
+        const previewImg = document.getElementById(`${type}-preview`);
+        if (previewImg) {
+          previewImg.src = base64String;
+          previewImg.style.display = 'block';
+          
+          // Add success animation
+          previewImg.style.opacity = '0';
+          previewImg.style.transition = 'opacity 0.3s ease';
+          setTimeout(() => {
+            previewImg.style.opacity = '1';
+          }, 10);
+        }
+        
+        console.log(`✅ Image uploaded for ${type} prize (${(file.size / 1024).toFixed(2)} KB)`);
+      };
+      
+      reader.onerror = function() {
+        alert('Failed to read image file');
+        input.value = '';
+      };
+      
+      reader.readAsDataURL(file);
+    }
+
+    // Save prize data
+    function savePrize(type) {
+      // Get existing prize data to preserve image if no new upload
+      const existing = localStorage.getItem(`prize_${type}`);
+      let existingImage = null;
+      if (existing) {
+        try {
+          existingImage = JSON.parse(existing).image;
+        } catch (e) {}
+      }
+
+      const prizeData = {
+        name: document.getElementById(`${type}-name`).value,
+        value: document.getElementById(`${type}-value`).value,
+        // Use uploaded Base64 image if available, otherwise keep existing
+        image: uploadedImages[type] || existingImage || DEFAULT_PRIZES[type].image,
+        cap: parseInt(document.getElementById(`${type}-cap`).value)
+      };
+
+      localStorage.setItem(`prize_${type}`, JSON.stringify(prizeData));
+
+      // Update cap in raffle state if exists
+      const raffleState = localStorage.getItem('raffleState');
+      if (raffleState) {
+        try {
+          const raffles = JSON.parse(raffleState);
+          if (raffles[type]) {
+            raffles[type].cap = prizeData.cap;
+            localStorage.setItem('raffleState', JSON.stringify(raffles));
+          }
+        } catch (e) {
+          console.error('Failed to update raffle cap:', e);
+        }
+      }
+
+      const successMessage = uploadedImages[type] 
+        ? `${type.charAt(0).toUpperCase() + type.slice(1)} prize updated! Image will appear on all prize cards automatically.`
+        : `${type.charAt(0).toUpperCase() + type.slice(1)} prize updated successfully!`;
+      
+      showSuccess(successMessage);
+    }
+
+    // Reset prize to defaults
+    function resetPrize(type) {
+      if (confirm(`Reset ${type} prize to default values?`)) {
+        const defaultData = DEFAULT_PRIZES[type];
+        
+        document.getElementById(`${type}-name`).value = defaultData.name;
+        document.getElementById(`${type}-value`).value = defaultData.value;
+        document.getElementById(`${type}-cap`).value = defaultData.cap;
+        
+        // Clear file input
+        document.getElementById(`${type}-image`).value = '';
+        
+        // Reset to default image
+        uploadedImages[type] = defaultData.image;
+        const previewImg = document.getElementById(`${type}-preview`);
+        if (previewImg && defaultData.image) {
+          previewImg.src = defaultData.image;
+          previewImg.style.display = 'block';
+        } else if (previewImg) {
+          previewImg.style.display = 'none';
+        }
+
+        localStorage.setItem(`prize_${type}`, JSON.stringify(defaultData));
+        
+        showSuccess(`${type.charAt(0).toUpperCase() + type.slice(1)} prize reset to defaults!`);
+      }
+    }
+
+    // Reset Raffle Cycle
+    function resetRaffleCycle() {
+      if (!confirm('Reset all raffle data? This will:\n\n• Clear all entries, ads watched, and surveys\n• Remove drawing states and winner data\n• Keep your prize configurations (names, images, caps)\n• Re-enable all prize entries\n\nContinue?')) {
+        return;
+      }
+
+      console.log('Resetting raffle cycle...');
+
+      // Clear player-related data (NOT admin configs)
+      localStorage.removeItem('raffleState');        // Entries, ads, surveys
+      localStorage.removeItem('drawing_daily');      // Drawing state
+      localStorage.removeItem('drawing_weekly');
+      localStorage.removeItem('drawing_monthly');
+      localStorage.removeItem('currentPrize');       // Winner data
+      localStorage.removeItem('activeTab');          // UI state
+      
+      // Keep these (admin configurations):
+      // - prize_daily, prize_weekly, prize_monthly (names, images, caps)
+      
+      // Re-enable raffle
+      localStorage.setItem('raffleActive', 'true');
+
+      // Reload stats to show reset state
+      loadStats();
+
+      // Show success message
+      showSuccess('Raffle cycle reset successfully! All entries cleared.');
+
+      console.log('Raffle cycle reset complete');
+    }
+
+    // Form submit handlers
+    document.getElementById('dailyForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      savePrize('daily');
+    });
+
+    document.getElementById('weeklyForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      savePrize('weekly');
+    });
+
+    document.getElementById('monthlyForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      savePrize('monthly');
+    });
+
+    // Show success modal
+    function showSuccess(message) {
+      document.getElementById('successMessage').textContent = message;
+      document.getElementById('successModal').classList.add('active');
+      loadStats(); // Refresh stats
+    }
+
+    // Close modal
+    function closeModal() {
+      document.getElementById('successModal').classList.remove('active');
+    }
+
+    // Dashboard initialization happens automatically after Firebase Auth verification
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrizeQuest • Reset Password</title>
+  <link rel="stylesheet" href="../style.css" />
+  <style>
+    .login-wrapper {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 8px;
+    }
+    .input {
+      width: 100%;
+      padding: 12px 14px;
+      color: #E7EEF1;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(0, 255, 170, 0.28);
+      border-radius: 10px;
+      outline: none;
+      transition: box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+    .input:focus {
+      border-color: rgba(0, 255, 170, 0.55);
+      background: rgba(0, 255, 170, 0.03);
+      box-shadow: 0 0 14px rgba(0, 255, 170, 0.25), inset 0 0 10px rgba(0, 255, 170, 0.12);
+    }
+    .btn {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid rgba(0, 255, 170, 0.38);
+      background: linear-gradient(180deg, rgba(0, 255, 170, 0.16), rgba(0, 255, 170, 0.08));
+      color: #E7EEF1;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      transition: box-shadow 180ms ease, transform 120ms ease, border-color 180ms ease;
+      box-shadow: 0 0 10px rgba(0, 255, 170, 0.18);
+    }
+    .btn:hover { box-shadow: 0 0 18px rgba(0, 255, 170, 0.35); }
+    .btn:active { transform: translateY(1px); }
+    .btn-secondary {
+      background: rgba(12, 19, 26, 0.72);
+      border: 1px solid rgba(0, 255, 170, 0.22);
+    }
+    .password-group {
+      position: relative;
+    }
+    .toggle-visibility {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: rgba(231,238,241,0.75);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="logo-ticket" aria-label="PrizeQuest neon ticket logo"></div>
+    <h1>Choose a new password</h1>
+    <p id="emailInfo" style="margin:0;font-size:.95rem;color:rgba(231,238,241,0.76);"></p>
+    <form class="form" id="resetForm" autocomplete="on" hidden>
+      <div class="password-group">
+        <input class="input" type="password" name="newPassword" id="newPassword" placeholder="New password" minlength="6" required />
+        <button class="toggle-visibility" type="button" data-target="newPassword">Show</button>
+      </div>
+      <div class="password-group">
+        <input class="input" type="password" name="confirmPassword" id="confirmPassword" placeholder="Confirm password" minlength="6" required />
+        <button class="toggle-visibility" type="button" data-target="confirmPassword">Show</button>
+      </div>
+      <button class="btn" type="submit" id="updateBtn">Update password</button>
+      <a class="btn btn-secondary" href="/auth/login.html" style="text-align:center;text-decoration:none;display:inline-block;">Back to login</a>
+      <a class="btn btn-secondary" href="/auth/forgot.html" id="resendLink" style="text-align:center;text-decoration:none;display:none;">Resend reset email</a>
+      <p id="status" style="font-size:.9rem;opacity:.85;margin:6px 0 0;"></p>
+    </form>
+    <div id="errorState" style="display:none;">
+      <p id="errorMessage" style="font-size:.95rem;color:#ff8a8a;margin:0 0 12px;"></p>
+      <a class="btn btn-secondary" href="/auth/login.html" style="text-align:center;text-decoration:none;display:inline-block;">Back to login</a>
+      <a class="btn" href="/auth/forgot.html" style="text-align:center;text-decoration:none;display:inline-block;margin-top:10px;">Resend reset email</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth } from './firebase-config.js';
+    import {
+      verifyPasswordResetCode,
+      confirmPasswordReset,
+    } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
+
+    const params = new URLSearchParams(location.search);
+    const mode = params.get('mode');
+    const oobCode = params.get('oobCode');
+
+    const form = document.getElementById('resetForm');
+    const emailInfo = document.getElementById('emailInfo');
+    const statusEl = document.getElementById('status');
+    const errorState = document.getElementById('errorState');
+    const errorMessage = document.getElementById('errorMessage');
+    const updateBtn = document.getElementById('updateBtn');
+    const resendLink = document.getElementById('resendLink');
+
+    const setStatus = (message = '', type = 'info') => {
+      if (!statusEl) return;
+      statusEl.textContent = message;
+      statusEl.style.color = type === 'error' ? '#ff8a8a' : 'rgba(231,238,241,0.9)';
+    };
+
+    const showErrorState = (message) => {
+      form.hidden = true;
+      errorState.style.display = 'flex';
+      errorState.style.flexDirection = 'column';
+      errorState.style.gap = '12px';
+      errorMessage.textContent = message || 'This reset link is invalid or has expired.';
+    };
+
+    const attachVisibilityToggle = () => {
+      document.querySelectorAll('.toggle-visibility').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = document.getElementById(btn.dataset.target);
+          if (!target) return;
+          const isPassword = target.type === 'password';
+          target.type = isPassword ? 'text' : 'password';
+          btn.textContent = isPassword ? 'Hide' : 'Show';
+        });
+      });
+    };
+
+    const init = async () => {
+      if (mode !== 'resetPassword' || !oobCode) {
+        showErrorState('Reset link missing or invalid. Please request a new one.');
+        return;
+      }
+
+      try {
+        const email = await verifyPasswordResetCode(auth, oobCode);
+        emailInfo.textContent = `Resetting password for ${email}`;
+        form.hidden = false;
+        attachVisibilityToggle();
+      } catch (error) {
+        console.error('verifyPasswordResetCode error:', error);
+        showErrorState('This reset link is invalid or has expired. Please request a new one.');
+      }
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const newPassword = document.getElementById('newPassword').value.trim();
+      const confirmPassword = document.getElementById('confirmPassword').value.trim();
+
+      if (newPassword.length < 6) {
+        setStatus('Password must be at least 6 characters long.', 'error');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setStatus('Passwords do not match.', 'error');
+        return;
+      }
+
+      setStatus('Updating password…');
+      updateBtn.disabled = true;
+
+      try {
+        await confirmPasswordReset(auth, oobCode, newPassword);
+        setStatus('Password updated! Redirecting to login…');
+        setTimeout(() => {
+          window.location.href = '/auth/login.html';
+        }, 1500);
+      } catch (error) {
+        console.error('confirmPasswordReset error:', error);
+        setStatus(error?.message || 'Could not update password. Please request a new link.', 'error');
+        updateBtn.disabled = false;
+        resendLink.style.display = 'inline-block';
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="120" y2="0">
+      <stop offset="0%" stop-color="#00FFAA" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#00FFAA" stop-opacity="0.6"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Stylized wordmark -->
+  <g filter="url(#glow)">
+    <text x="40" y="26" font-family="'Exo 2', 'Exo2', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" font-size="22" fill="url(#g)" font-weight="700" letter-spacing="0.5">Snake</text>
+  </g>
+  <!-- Animated snake outline around the S -->
+  <g>
+    <path id="snake-coil" d="M18 8 C 8 8, 8 22, 18 22 C 28 22, 28 34, 14 34" stroke="#00FFAA" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <circle r="3" fill="#00FFAA" id="snake-dot">
+      <animateMotion dur="2.2s" repeatCount="indefinite" rotate="auto">
+        <mpath href="#snake-coil"/>
+      </animateMotion>
+    </circle>
+  </g>
+</svg>
