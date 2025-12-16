@@ -58,26 +58,34 @@
       }
     }
     
-    // Auth state listener - runs immediately on page load
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        // Not authenticated → redirect to login
-        window.location.href = '/auth/login.html';
-        return;
-      }
-      
-      // Check if user has admin role
-      const isAdmin = await checkAdminAccess(user);
-      
-      if (!isAdmin) {
-        // Authenticated but not admin → redirect to home (appears as "Not Found")
-        window.location.href = '/dashboard.html';
-        return;
-      }
-      
-      // User is authenticated and has admin role → show page
+    // Check for sessionStorage admin authentication first (from admin-access page)
+    const sessionAdminAuth = sessionStorage.getItem('adminAuthenticated');
+    if (sessionAdminAuth === 'true') {
+      // User authenticated via admin-access page → show page immediately
       document.documentElement.style.visibility = 'visible';
-    });
+    } else {
+      // If no session auth, check Firebase Auth
+      // Auth state listener - runs immediately on page load
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          // Not authenticated → redirect to admin access page
+          window.location.href = '/admin-access.html';
+          return;
+        }
+        
+        // Check if user has admin role
+        const isAdmin = await checkAdminAccess(user);
+        
+        if (!isAdmin) {
+          // Authenticated but not admin → redirect to admin access page
+          window.location.href = '/admin-access.html';
+          return;
+        }
+        
+        // User is authenticated and has admin role → show page
+        document.documentElement.style.visibility = 'visible';
+      });
+    }
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -792,19 +800,27 @@
         'Admin Mode disabled. Random winners will be shown to users.');
     }
 
-    // Logout - ADMIN ACCESS ENFORCEMENT: Uses Firebase signOut
+    // Logout - ADMIN ACCESS ENFORCEMENT: Clears both sessionStorage and Firebase Auth
     async function logout() {
       try {
         // Clear admin mode on logout
         localStorage.setItem('isAdminMode', 'false');
-        // Sign out from Firebase Auth
-        await signOut(auth);
-        // Redirect to login page
-        window.location.href = '/auth/login.html';
+        // Clear sessionStorage admin authentication
+        sessionStorage.removeItem('adminAuthenticated');
+        sessionStorage.removeItem('adminUsername');
+        // Sign out from Firebase Auth (if authenticated via Firebase)
+        try {
+          await signOut(auth);
+        } catch (firebaseError) {
+          // Ignore Firebase signOut errors (user might not be Firebase authenticated)
+          console.log('Firebase signOut skipped (not Firebase authenticated)');
+        }
+        // Redirect to admin access page
+        window.location.href = '/admin-access.html';
       } catch (error) {
         console.error('Error signing out:', error);
         // Still redirect even if signOut fails
-        window.location.href = '/auth/login.html';
+        window.location.href = '/admin-access.html';
       }
     }
     
@@ -1044,6 +1060,9 @@
     function closeModal() {
       document.getElementById('successModal').classList.remove('active');
     }
+    
+    // Make closeModal available globally for onclick handler
+    window.closeModal = closeModal;
 
     // Dashboard initialization happens automatically after Firebase Auth verification
   </script>

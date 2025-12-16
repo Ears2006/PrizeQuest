@@ -5,11 +5,20 @@
     import { auth } from '/auth/firebase-config.js';
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js';
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = '/auth/login.html';
-      }
-    });
+    // Check for guest mode first
+    const isGuestMode = localStorage.getItem('guestMode') === 'true';
+    
+    if (isGuestMode) {
+      // Allow guest access - show page immediately
+      document.getElementById('appRoot').style.visibility = 'visible';
+    } else {
+      // Normal auth check
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          window.location.href = '/auth/login.html';
+        }
+      });
+    }
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -32,6 +41,8 @@
       <span class="pq-logo-text">PrizeQuest</span>
     </div>
     <div class="pq-header__user">
+      <span id="guestBadge" style="display: none; margin-right: 10px; padding: 6px 12px; background: rgba(255, 193, 7, 0.2); border: 1px solid rgba(255, 193, 7, 0.5); border-radius: 8px; color: #ffc107; font-size: 0.85rem; font-weight: 600;">👁️ Guest Mode</span>
+      <a href="admin-access.html" class="pq-btn" style="margin-right:10px; text-decoration: none; display: inline-block;">⚙️ Admin</a>
       <div class="pq-user-icon" aria-label="User"></div>
       <a href="profile/build.html" class="pq-btn" style="margin-left:10px; text-decoration: none; display: inline-block;">👤 Profile</a>
     </div>
@@ -384,9 +395,110 @@
     </div>
   </div>
 
+  <!-- Guest Registration Prompt Modal -->
+  <div id="guestPromptModal" class="pq-modal" hidden>
+    <div class="pq-modal__overlay"></div>
+    <div class="pq-modal__card" role="dialog" aria-modal="true">
+      <div class="pq-modal__icon">🔒</div>
+      <h3 class="pq-modal__title">Registration Required</h3>
+      <p class="pq-modal__message pq-modal__message--large">You're viewing as a guest!</p>
+      <p class="pq-modal__message">To participate in sweepstakes, take surveys, buy tickets, and play games, please create an account.</p>
+      <div class="pq-modal__actions">
+        <button id="guestRegisterBtn" class="pq-btn pq-btn--primary">Create Account</button>
+        <button id="guestCancelBtn" class="pq-btn pq-btn--secondary">Continue Browsing</button>
+      </div>
+    </div>
+  </div>
+
   </div>
   <script src="/snake-game.js"></script>
   <script type="module" src="/script.js"></script>
+  <script>
+    // Guest mode interaction blocking
+    (function() {
+      const isGuestMode = localStorage.getItem('guestMode') === 'true';
+      if (!isGuestMode) return;
+
+      // Show guest badge
+      const guestBadge = document.getElementById('guestBadge');
+      if (guestBadge) {
+        guestBadge.style.display = 'inline-block';
+      }
+
+      // Hide admin and profile buttons for guests
+      const adminBtn = document.querySelector('a[href="admin-access.html"]');
+      const profileBtn = document.querySelector('a[href="profile/build.html"]');
+      if (adminBtn) adminBtn.style.display = 'none';
+      if (profileBtn) profileBtn.style.display = 'none';
+
+      const guestModal = document.getElementById('guestPromptModal');
+      const registerBtn = document.getElementById('guestRegisterBtn');
+      const cancelBtn = document.getElementById('guestCancelBtn');
+
+      function showGuestPrompt() {
+        if (guestModal) {
+          guestModal.removeAttribute('hidden');
+        }
+      }
+
+      function hideGuestPrompt() {
+        if (guestModal) {
+          guestModal.setAttribute('hidden', '');
+        }
+      }
+
+      if (registerBtn) {
+        registerBtn.addEventListener('click', function() {
+          localStorage.removeItem('guestMode');
+          window.location.href = '/auth/login.html';
+        });
+      }
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', hideGuestPrompt);
+      }
+
+      // Intercept all interactive buttons
+      document.addEventListener('click', function(e) {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        // Allow navigation tabs, modal buttons, and guest modal buttons
+        if (target.closest('.pq-tab') || 
+            target.id === 'guestRegisterBtn' || 
+            target.id === 'guestCancelBtn' ||
+            target.id === 'close-survey-modal' ||
+            target.closest('#guestPromptModal')) {
+          return;
+        }
+
+        // Block interactive buttons
+        const blockedSelectors = [
+          '[id^="buy-"]',
+          '[id^="survey-"]',
+          '#snakePlayCardBtn',
+          '#start-game-btn',
+          '#play-again-btn',
+          '#back-to-home-btn',
+          '#backHomeBtn',
+          '#start-level-btn',
+          '#level-continue-btn',
+          '#claim-entry-btn',
+          '#choose-daily',
+          '#choose-weekly',
+          '#choose-monthly'
+        ];
+
+        const isBlocked = blockedSelectors.some(selector => target.matches(selector));
+        
+        if (isBlocked) {
+          e.preventDefault();
+          e.stopPropagation();
+          showGuestPrompt();
+        }
+      }, true); // Use capture phase to catch events early
+    })();
+  </script>
 </body>
 </html>
 
