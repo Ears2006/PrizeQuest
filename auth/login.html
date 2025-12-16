@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>PrizeQuest • Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="../style.css?v=2.0">
   <style>
     body {
       min-height: 100vh;
@@ -117,8 +120,18 @@
       <button class="btn" id="authBtn" type="submit">Login</button>
       <p id="authStatus" style="font-size:.9rem;opacity:.8;margin:6px 0 0;"></p>
     </form>
+    <button class="btn" id="guestBtn" type="button" style="background: linear-gradient(180deg, rgba(231, 238, 241, 0.1), rgba(231, 238, 241, 0.05)); border-color: rgba(231, 238, 241, 0.3); margin-top: 10px;">👁️ View as Guest</button>
   </div>
   <script type="module" src="./auth.js"></script>
+  <script>
+    // Guest mode handler
+    document.getElementById('guestBtn').addEventListener('click', function() {
+      // Set guest mode flag
+      localStorage.setItem('guestMode', 'true');
+      // Redirect to dashboard
+      window.location.href = '/dashboard.html';
+    });
+  </script>
 </body>
 </html>
 

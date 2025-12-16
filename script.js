@@ -4,26 +4,41 @@ import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.1/f
 
 console.log("DASHBOARD_AUTH_GUARD: starting...");
 
-onAuthStateChanged(auth, (user) => {
-  console.log("DASHBOARD_AUTH_GUARD: user present?", !!user);
+// Check for guest mode first
+const isGuestMode = localStorage.getItem('guestMode') === 'true';
 
-  if (!user) {
-    // No signed-in user, send them to login page
-    window.location.href = "/auth/login.html";
-    return;
-  }
-
-  // User is signed in — reveal the dashboard
+if (isGuestMode) {
+  console.log("DASHBOARD_AUTH_GUARD: Guest mode enabled");
+  // Guest mode - reveal dashboard immediately
   const appRoot = document.getElementById("appRoot");
   if (appRoot) {
     appRoot.style.visibility = "visible";
   }
-
-  // Only after this point should the rest of the dashboard logic run.
-  // If existing dashboard code currently runs at the top level of script.js,
-  // wrap that logic in a function (e.g., initDashboard()) and call it here.
+  // Initialize dashboard for guest (with restrictions)
   initDashboard();
-});
+} else {
+  // Normal auth check
+  onAuthStateChanged(auth, (user) => {
+    console.log("DASHBOARD_AUTH_GUARD: user present?", !!user);
+
+    if (!user) {
+      // No signed-in user, send them to login page
+      window.location.href = "/auth/login.html";
+      return;
+    }
+
+    // User is signed in — reveal the dashboard
+    const appRoot = document.getElementById("appRoot");
+    if (appRoot) {
+      appRoot.style.visibility = "visible";
+    }
+
+    // Only after this point should the rest of the dashboard logic run.
+    // If existing dashboard code currently runs at the top level of script.js,
+    // wrap that logic in a function (e.g., initDashboard()) and call it here.
+    initDashboard();
+  });
+}
 
 // Wrap all existing code in initialization function
 function initDashboard() {
@@ -200,15 +215,21 @@ function loadPrizeConfigurations() {
           prizeNames[type] = prizeConfig.name;
         }
         
-        // Update cap if changed
-        if (prizeConfig.cap && raffles[type]) {
-          raffles[type].cap = parseInt(prizeConfig.cap);
+        // ALWAYS update cap from prize configuration (admin panel is source of truth)
+        if (prizeConfig.cap !== undefined && prizeConfig.cap !== null) {
+          const newCap = parseInt(prizeConfig.cap);
+          if (!isNaN(newCap) && raffles[type]) {
+            raffles[type].cap = newCap;
+            console.log(`Updated ${type} cap to ${newCap} from prize config`);
+          }
         }
         
         console.log(`Loaded ${type} prize config:`, prizeConfig);
       } catch (e) {
         console.error(`Failed to load ${type} prize config:`, e);
       }
+    } else {
+      console.log(`No prize config found for ${type}, using default cap: ${raffles[type]?.cap}`);
     }
   });
 }
@@ -232,6 +253,28 @@ function applyPrizeConfigurationsToUI() {
         // Update prize value if shown
         if (prizeConfig.value) {
           updatePrizeValue(type, prizeConfig.value);
+        }
+        
+        // Update cap in raffles object if provided
+        if (prizeConfig.cap && raffles[type]) {
+          raffles[type].cap = parseInt(prizeConfig.cap);
+        }
+        
+        // IMMEDIATELY update cap display elements if they exist
+        if (prizeConfig.cap !== undefined && prizeConfig.cap !== null) {
+          const newCap = parseInt(prizeConfig.cap);
+          if (!isNaN(newCap)) {
+            const capEl = document.getElementById(`cap-${type}`);
+            const capTabEl = document.getElementById(`cap-${type}-tab`);
+            if (capEl) {
+              capEl.textContent = newCap;
+              console.log(`Immediately updated cap-${type} to ${newCap} in applyPrizeConfigurationsToUI`);
+            }
+            if (capTabEl) {
+              capTabEl.textContent = newCap;
+              console.log(`Immediately updated cap-${type}-tab to ${newCap} in applyPrizeConfigurationsToUI`);
+            }
+          }
         }
       } catch (e) {
         console.error(`Failed to apply ${type} prize config:`, e);
@@ -299,6 +342,9 @@ function checkPrizeCapReached(type) {
   if (raffle.entries >= raffle.cap) {
     console.log(`Prize cap reached for ${type}! Card now in "Drawing Ready" state.`);
     
+    // Clear any old drawing states - new cap reached means fresh start
+    clearDrawingState(type);
+    
     // Store prize info in localStorage for when admin clicks to start
     const prizeInfo = {
       name: prizeNames[type] || type,
@@ -326,6 +372,7 @@ function handleTakeSurvey(type, buttonElement) {
   // Check if already completed 5 surveys
   if (raffle.surveyCount >= 5) {
     console.log(`Survey limit reached for ${type}`);
+    alert('You have already completed all 5 surveys for this prize.');
     return;
   }
   
@@ -334,7 +381,7 @@ function handleTakeSurvey(type, buttonElement) {
   
   // Award 1 entry for completing survey
   raffle.entries++;
-  console.log(`Survey ${raffle.surveyCount} completed for ${type}. Entry awarded! Total entries: ${raffle.entries}`);
+  console.log(`Survey ${raffle.surveyCount}/5 completed for ${type}. Entry awarded! Total entries: ${raffle.entries}/${raffle.cap}`);
   
   updateRaffleUI(type);
   saveRaffleState();
@@ -347,8 +394,11 @@ function handleTakeSurvey(type, buttonElement) {
     showBurstAnimation(buttonElement);
   }
   
-  // Check if cap reached after awarding entry
-  checkPrizeCapReached(type);
+  // Check if cap reached after awarding entry (only show overlay if cap is actually reached)
+  const capReached = checkPrizeCapReached(type);
+  if (capReached) {
+    console.log(`Cap reached for ${type} after survey. Entries: ${raffle.entries}, Cap: ${raffle.cap}`);
+  }
 }
 
 // RAFFLE INTERACTION FUNCTIONS
@@ -398,7 +448,7 @@ function showSurveyCompleteModal(type, surveyCount) {
   
   if (!modal || !message) {
     // Fallback if modal doesn't exist yet
-    alert(`Survey Complete! Thanks for your feedback. (${surveyCount}/2)\n+1 Entry Awarded!`);
+    alert(`Survey Complete! Thanks for your feedback. (${surveyCount}/5)\n+1 Entry Awarded!`);
     return;
   }
   
@@ -421,12 +471,31 @@ function showSurveyCompleteModal(type, surveyCount) {
   }
   
   modal.removeAttribute('hidden');
+  
+  // Ensure close button works - add click handler directly
+  const closeBtn = document.getElementById('close-survey-modal');
+  if (closeBtn) {
+    // Remove any existing listeners and add a fresh one
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    newCloseBtn.addEventListener('click', function() {
+      modal.setAttribute('hidden', '');
+    });
+  }
 }
 
 // --- Unified button event delegation ---
 document.addEventListener("click", (e) => {
   const target = e.target.closest("button");
   if (!target) return;
+
+  // Check for guest mode
+  const isGuestMode = localStorage.getItem('guestMode') === 'true';
+  if (isGuestMode) {
+    // Guest mode - let the dashboard.html script handle the prompt
+    // This handler will still run but the dashboard.html handler will show the modal
+    return;
+  }
 
   // Match buy/watch/survey buttons by id
   if (target.id?.startsWith("buy-")) {
@@ -501,17 +570,48 @@ function updateRaffleUI(type) {
     return;
   }
   
+  // CRITICAL: Always get the latest cap from prize config (localStorage) to ensure admin changes are reflected
+  let cap = parseInt(r.cap) || 0;
+  const prizeConfigStored = localStorage.getItem(`prize_${type}`);
+  if (prizeConfigStored) {
+    try {
+      const prizeConfig = JSON.parse(prizeConfigStored);
+      if (prizeConfig.cap !== undefined && prizeConfig.cap !== null) {
+        const configCap = parseInt(prizeConfig.cap);
+        if (!isNaN(configCap)) {
+          cap = configCap;
+          // Update raffles object to match
+          raffles[type].cap = configCap;
+          console.log(`updateRaffleUI: Using cap ${cap} from prize_${type} config (was ${r.cap})`);
+        }
+      }
+    } catch (e) {
+      console.error(`Failed to read cap from prize config for ${type}:`, e);
+    }
+  }
+  
   // Ensure all values are valid numbers (no NaN, null, undefined)
   const entries = parseInt(r.entries) || 0;
   const surveyCount = parseInt(r.surveyCount) || 0;
-  const cap = parseInt(r.cap) || 0;
+  
+  console.log(`updateRaffleUI(${type}): entries=${entries}, cap=${cap}, surveyCount=${surveyCount}`);
   
   const isCapReached = entries >= cap;
   const surveyComplete = surveyCount >= 5;
   
-  // Check if prize is in drawing state
+  // Check if prize is in active drawing state (not expired)
   const drawingState = getDrawingState(type);
-  const isDrawing = drawingState && drawingState.status === 'drawing';
+  let isDrawing = false;
+  if (drawingState && drawingState.status === 'drawing') {
+    // Check if drawing is still active (within duration)
+    const elapsed = Date.now() - drawingState.startTime;
+    isDrawing = elapsed < drawingState.duration;
+    
+    // If drawing is expired, clear it
+    if (!isDrawing) {
+      clearDrawingState(type);
+    }
+  }
   
   // Update card overlay for drawing state (manual start only, no auto-initiate)
   updateCardOverlay(type, isCapReached, isDrawing);
@@ -525,11 +625,37 @@ function updateRaffleUI(type) {
   const surveyBtn = document.getElementById(`survey-${type}`);
   
   if (entriesEl) entriesEl.textContent = entries;
-  if (capEl) capEl.textContent = cap;
-  if (remainingEl) remainingEl.textContent = Math.max(0, cap - entries);
+  if (capEl) {
+    const oldCapText = capEl.textContent;
+    // Try multiple methods to ensure update
+    capEl.textContent = String(cap);
+    capEl.innerHTML = String(cap);
+    // Verify it updated
+    const newCapText = capEl.textContent;
+    console.log(`Updated cap-${type} element: "${oldCapText}" → "${newCapText}" (target: ${cap})`);
+    if (newCapText !== String(cap) && newCapText !== String(cap).trim()) {
+      console.error(`WARNING: cap-${type} element did not update correctly! Expected "${cap}", got "${newCapText}"`);
+      // Try one more time with innerText
+      capEl.innerText = String(cap);
+    }
+  } else {
+    console.warn(`cap-${type} element NOT FOUND in DOM! Searching for alternatives...`);
+    // Try to find it with querySelector as fallback
+    const altCapEl = document.querySelector(`#cap-${type}`);
+    if (altCapEl) {
+      altCapEl.textContent = String(cap);
+      console.log(`Found cap-${type} with querySelector and updated to ${cap}`);
+    }
+  }
+  if (remainingEl) {
+    const remaining = Math.max(0, cap - entries);
+    remainingEl.textContent = remaining;
+    console.log(`Updated remaining-${type}: ${remaining} (cap: ${cap}, entries: ${entries})`);
+  }
   if (progressEl) {
     const progress = cap > 0 ? (entries / cap) * 100 : 0;
     progressEl.style.width = Math.min(100, Math.max(0, progress)) + "%";
+    console.log(`Updated progress-${type}: ${progress.toFixed(1)}% (entries: ${entries}, cap: ${cap})`);
   }
   if (buyBtn) {
     buyBtn.disabled = isCapReached;
@@ -552,8 +678,26 @@ function updateRaffleUI(type) {
   const surveyTabBtn = document.getElementById(`survey-${type}-tab`);
   
   if (entriesTabEl) entriesTabEl.textContent = entries;
-  if (capTabEl) capTabEl.textContent = cap;
-  if (remainingTabEl) remainingTabEl.textContent = Math.max(0, cap - entries);
+  if (capTabEl) {
+    const oldCapText = capTabEl.textContent;
+    // Try multiple methods to ensure update
+    capTabEl.textContent = String(cap);
+    capTabEl.innerHTML = String(cap);
+    // Verify it updated
+    const newCapText = capTabEl.textContent;
+    console.log(`Updated cap-${type}-tab element: "${oldCapText}" → "${newCapText}" (target: ${cap})`);
+    if (newCapText !== String(cap) && newCapText !== String(cap).trim()) {
+      console.error(`WARNING: cap-${type}-tab element did not update correctly! Expected "${cap}", got "${newCapText}"`);
+      // Try one more time with innerText
+      capTabEl.innerText = String(cap);
+    }
+  } else {
+    console.warn(`cap-${type}-tab element NOT FOUND in DOM!`);
+  }
+  if (remainingTabEl) {
+    const remaining = Math.max(0, cap - entries);
+    remainingTabEl.textContent = remaining;
+  }
   if (progressTabEl) {
     const progress = cap > 0 ? (entries / cap) * 100 : 0;
     progressTabEl.style.width = Math.min(100, Math.max(0, progress)) + "%";
@@ -721,21 +865,48 @@ function loadRaffleState() {
     try {
       const parsed = JSON.parse(data);
       // Merge loaded data with defaults to ensure all properties exist
+      // IMPORTANT: Cap ALWAYS comes from prize configuration, NEVER from raffleState
+      // This ensures admin changes to caps are always reflected
       Object.keys(raffles).forEach(key => {
         if (parsed[key]) {
+          // Store the cap that was set by loadPrizeConfigurations() BEFORE overwriting
+          const capFromConfig = raffles[key]?.cap;
           raffles[key] = {
             entries: parseInt(parsed[key].entries) || 0,
             adCount: parseInt(parsed[key].adCount) || 0,
             surveyCount: parseInt(parsed[key].surveyCount) || 0,
-            cap: raffles[key].cap // Keep original cap
+            cap: capFromConfig || raffles[key]?.cap || 0 // Always use cap from prize configuration
           };
+          console.log(`Loaded ${key} raffle: entries=${raffles[key].entries}, cap=${raffles[key].cap} (from config)`);
         }
       });
       console.log('Raffle state loaded:', raffles);
     } catch (e) {
       console.warn('Failed to load raffle state:', e);
     }
+  } else {
+    console.log('No raffleState found in localStorage');
   }
+  
+  // After loading raffle state, ensure caps are reloaded from prize config
+  // This is a safety measure to ensure admin changes are always reflected
+  ['daily', 'weekly', 'monthly'].forEach(type => {
+    const stored = localStorage.getItem(`prize_${type}`);
+    if (stored) {
+      try {
+        const prizeConfig = JSON.parse(stored);
+        if (prizeConfig.cap !== undefined && prizeConfig.cap !== null && raffles[type]) {
+          const newCap = parseInt(prizeConfig.cap);
+          if (!isNaN(newCap)) {
+            raffles[type].cap = newCap;
+            console.log(`Re-applied ${type} cap from prize config: ${newCap}`);
+          }
+        }
+      } catch (e) {
+        console.error(`Failed to re-apply cap for ${type}:`, e);
+      }
+    }
+  });
 }
 
 // TAB PERSISTENCE
@@ -859,6 +1030,51 @@ function activateTab(target) {
   
   // Save the active tab to localStorage
   saveActiveTab(target);
+  
+  // If home tab is activated, refresh caps from prize config to ensure they're up to date
+  if (target === "home") {
+    // Use requestAnimationFrame to ensure panel is visible
+    requestAnimationFrame(() => {
+      ['daily', 'weekly', 'monthly'].forEach(type => {
+        const stored = localStorage.getItem(`prize_${type}`);
+        if (stored) {
+          try {
+            const config = JSON.parse(stored);
+            if (config.cap !== undefined && config.cap !== null && raffles[type]) {
+              const newCap = parseInt(config.cap);
+              if (!isNaN(newCap)) {
+                raffles[type].cap = newCap;
+                // Force update the cap display immediately with multiple methods
+                const capEl = document.getElementById(`cap-${type}`);
+                if (capEl) {
+                  capEl.textContent = String(newCap);
+                  capEl.innerHTML = String(newCap);
+                  capEl.innerText = String(newCap);
+                  console.log(`✓ Refreshed cap-${type} to ${newCap} when home tab activated`);
+                } else {
+                  console.warn(`✗ cap-${type} not found when home tab activated`);
+                }
+                const capTabEl = document.getElementById(`cap-${type}-tab`);
+                if (capTabEl) {
+                  capTabEl.textContent = String(newCap);
+                  capTabEl.innerHTML = String(newCap);
+                }
+                // Update remaining count
+                const remainingEl = document.getElementById(`remaining-${type}`);
+                if (remainingEl) {
+                  remainingEl.textContent = Math.max(0, newCap - (raffles[type].entries || 0));
+                }
+                // Also call updateRaffleUI to update everything
+                updateRaffleUI(type);
+              }
+            }
+          } catch (e) {
+            console.error(`Failed to refresh cap for ${type} on home tab:`, e);
+          }
+        }
+      });
+    });
+  }
 }
 
 // Export activateTab for use by other scripts (like snake game)
@@ -879,7 +1095,7 @@ window.addEventListener("DOMContentLoaded", () => {
   console.log('Loading prize configurations from admin panel...');
   loadPrizeConfigurations();
   
-  // Load raffle state from localStorage
+  // Load raffle state from localStorage (this will also re-apply caps from prize config)
   loadRaffleState();
   
   // Load quest state - DISABLED (Quests Coming Soon)
@@ -894,10 +1110,134 @@ window.addEventListener("DOMContentLoaded", () => {
   
   // Initialize all raffle UIs with current state (including button states)
   console.log('Initializing raffle UIs...');
-  updateRaffleUI("daily");
-  updateRaffleUI("weekly");
-  updateRaffleUI("monthly");
-  updateRaffleUI("xbox");
+  
+  // FINAL CHECK: Force reload caps from prize config right before updating UI
+  ['daily', 'weekly', 'monthly'].forEach(type => {
+    const stored = localStorage.getItem(`prize_${type}`);
+    if (stored) {
+      try {
+        const config = JSON.parse(stored);
+        if (config.cap !== undefined && config.cap !== null && raffles[type]) {
+          const newCap = parseInt(config.cap);
+          if (!isNaN(newCap)) {
+            const oldCap = raffles[type].cap;
+            raffles[type].cap = newCap;
+            console.log(`FINAL: ${type} cap updated from ${oldCap} to ${newCap} (from prize_${type})`);
+          }
+        }
+      } catch (e) {
+        console.error(`Failed to final reload cap for ${type}:`, e);
+      }
+    }
+  });
+  
+  console.log('Current raffle caps BEFORE updateRaffleUI:', {
+    daily: raffles.daily?.cap,
+    weekly: raffles.weekly?.cap,
+    monthly: raffles.monthly?.cap
+  });
+  
+  // Function to force update cap displays directly
+  function forceUpdateCaps() {
+    ['daily', 'weekly', 'monthly'].forEach(type => {
+      const stored = localStorage.getItem(`prize_${type}`);
+      if (stored) {
+        try {
+          const config = JSON.parse(stored);
+          if (config.cap !== undefined && config.cap !== null) {
+            const newCap = parseInt(config.cap);
+            if (!isNaN(newCap)) {
+              // Update raffles object
+              if (raffles[type]) {
+                raffles[type].cap = newCap;
+              }
+              
+              // Force update ALL cap elements directly
+              const capEl = document.getElementById(`cap-${type}`);
+              const capTabEl = document.getElementById(`cap-${type}-tab`);
+              
+              if (capEl) {
+                capEl.textContent = String(newCap);
+                capEl.innerHTML = String(newCap);
+                console.log(`✓ Force updated cap-${type} to ${newCap}`);
+              } else {
+                console.warn(`✗ cap-${type} element not found`);
+              }
+              
+              if (capTabEl) {
+                capTabEl.textContent = String(newCap);
+                capTabEl.innerHTML = String(newCap);
+                console.log(`✓ Force updated cap-${type}-tab to ${newCap}`);
+              }
+              
+              // Update remaining count
+              const entries = raffles[type]?.entries || 0;
+              const remainingEl = document.getElementById(`remaining-${type}`);
+              const remainingTabEl = document.getElementById(`remaining-${type}-tab`);
+              
+              if (remainingEl) {
+                remainingEl.textContent = Math.max(0, newCap - entries);
+              }
+              if (remainingTabEl) {
+                remainingTabEl.textContent = Math.max(0, newCap - entries);
+              }
+            }
+          }
+        } catch (e) {
+          console.error(`Failed to force update cap for ${type}:`, e);
+        }
+      }
+    });
+  }
+  
+  // Update all raffle UIs - use requestAnimationFrame to ensure DOM is ready
+  requestAnimationFrame(() => {
+    // First, force update caps directly
+    forceUpdateCaps();
+    
+    // Then update all UIs
+    updateRaffleUI("daily");
+    updateRaffleUI("weekly");
+    updateRaffleUI("monthly");
+    updateRaffleUI("xbox");
+    
+    console.log('Raffle UIs updated. Check DOM elements to verify cap values.');
+    
+    // Double-check: Update caps one more time after a short delay to catch any timing issues
+    setTimeout(() => {
+      console.log('Double-checking cap updates after delay...');
+      forceUpdateCaps();
+      updateRaffleUI("daily");
+      updateRaffleUI("weekly");
+      updateRaffleUI("monthly");
+    }, 200);
+    
+    // Triple-check: Update again after a longer delay to ensure everything is ready
+    setTimeout(() => {
+      console.log('Triple-checking cap updates after longer delay...');
+      forceUpdateCaps();
+    }, 500);
+  });
+  
+  // Refresh caps when page becomes visible (user returns from admin page)
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+      console.log('Page visible - refreshing prize configurations...');
+      loadPrizeConfigurations();
+      updateRaffleUI("daily");
+      updateRaffleUI("weekly");
+      updateRaffleUI("monthly");
+    }
+  });
+  
+  // Also refresh on window focus (when user switches back to tab)
+  window.addEventListener('focus', function() {
+    console.log('Window focused - refreshing prize configurations...');
+    loadPrizeConfigurations();
+    updateRaffleUI("daily");
+    updateRaffleUI("weekly");
+    updateRaffleUI("monthly");
+  });
   
   // Log initial state for debugging
   console.log('Initial raffle state:', {
@@ -935,21 +1275,63 @@ window.addEventListener("DOMContentLoaded", () => {
     activateTab(lastActiveTab);
   }
   
+  // CRITICAL: After activating the tab, force update caps one more time
+  // This ensures caps are updated even if the panel was hidden during initialization
+  setTimeout(() => {
+    console.log('Final cap update after tab activation...');
+    ['daily', 'weekly', 'monthly'].forEach(type => {
+      const stored = localStorage.getItem(`prize_${type}`);
+      if (stored) {
+        try {
+          const config = JSON.parse(stored);
+          if (config.cap !== undefined && config.cap !== null) {
+            const newCap = parseInt(config.cap);
+            if (!isNaN(newCap)) {
+              // Update raffles
+              if (raffles[type]) {
+                raffles[type].cap = newCap;
+              }
+              // Force update ALL cap elements
+              const capEl = document.getElementById(`cap-${type}`);
+              const capTabEl = document.getElementById(`cap-${type}-tab`);
+              if (capEl) {
+                capEl.textContent = String(newCap);
+                capEl.innerHTML = String(newCap);
+                console.log(`FINAL: Updated cap-${type} to ${newCap}`);
+              }
+              if (capTabEl) {
+                capTabEl.textContent = String(newCap);
+                capTabEl.innerHTML = String(newCap);
+              }
+              // Update remaining
+              const entries = raffles[type]?.entries || 0;
+              const remainingEl = document.getElementById(`remaining-${type}`);
+              if (remainingEl) {
+                remainingEl.textContent = Math.max(0, newCap - entries);
+              }
+            }
+          }
+        } catch (e) {
+          console.error(`Failed final cap update for ${type}:`, e);
+        }
+      }
+    });
+  }, 300);
+  
   // Global safety listener for route changes
   window.addEventListener("hashchange", window.hideSnakeGame);
 
   // Reset functionality moved to admin dashboard only
 
-  // EVENT LISTENERS - Survey Complete Modal
-  const closeSurveyModalBtn = document.getElementById('close-survey-modal');
-  if (closeSurveyModalBtn) {
-    closeSurveyModalBtn.addEventListener('click', function() {
+  // EVENT LISTENERS - Survey Complete Modal (using event delegation for reliability)
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'close-survey-modal') {
       const modal = document.getElementById('survey-complete-modal');
       if (modal) {
         modal.setAttribute('hidden', '');
       }
-    });
-  }
+    }
+  });
 
   // EVENT LISTENERS - Ticket choice modal
   const chooseDailyBtn = document.getElementById('choose-daily');

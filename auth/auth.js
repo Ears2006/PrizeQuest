@@ -40,6 +40,8 @@ if (form) {
       if (isRegister) {
         // Create account → send verification → go to check-email page
         const cred = await createUserWithEmailAndPassword(auth, email, password);
+        // Clear guest mode when registering
+        localStorage.removeItem('guestMode');
         const returnUrl = `${location.origin}/profile/build.html`; // where we go after verifying
         await sendEmailVerification(cred.user, { url: returnUrl });
         window.location.href = '/auth/check-email.html';
@@ -48,6 +50,8 @@ if (form) {
 
       // Login → if not verified, push to check-email; if verified, continue to app
       const cred = await signInWithEmailAndPassword(auth, email, password);
+      // Clear guest mode when logging in
+      localStorage.removeItem('guestMode');
       await reload(cred.user);
       if (!cred.user.emailVerified) {
         window.location.href = '/auth/check-email.html';

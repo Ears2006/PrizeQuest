@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Admin Access - PrizeQuest</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -176,6 +179,10 @@
   </div>
 
   <script type="module">
+    // Admin credentials
+    const ADMIN_USERNAME = 'ears2006';
+    const ADMIN_PASSWORD = 'Mavo519';
+
     // Admin access form handler
     const form = document.getElementById('adminAccessForm');
     const usernameInput = document.getElementById('username');
@@ -197,18 +204,22 @@
         try {
           if (loginBtn) loginBtn.disabled = true;
 
-          // Admin authentication logic would go here
-          // For now, redirect to admin dashboard after validation
-          // This maintains the existing admin routing/permissions logic
-          
-          // Store admin session (if needed by existing logic)
-          sessionStorage.setItem('adminAuthenticated', 'true');
-          
-          // Redirect to admin dashboard
-          window.location.href = '/admin.html';
+          // Validate admin credentials
+          if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+            // Store admin session
+            sessionStorage.setItem('adminAuthenticated', 'true');
+            sessionStorage.setItem('adminUsername', username);
+            
+            // Redirect to admin dashboard
+            window.location.href = '/admin.html';
+          } else {
+            alert('Invalid username or password. Please try again.');
+            passwordInput.value = '';
+            if (loginBtn) loginBtn.disabled = false;
+          }
         } catch (error) {
           console.error('Admin login error:', error);
-          alert('Invalid credentials. Please try again.');
+          alert('An error occurred. Please try again.');
           if (loginBtn) loginBtn.disabled = false;
         }
       });
@@ -216,4 +227,3 @@
   </script>
 </body>
 </html>
-

@@ -22,11 +22,14 @@
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>PrizeQuest</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=2.0">
   <style>
     #appRoot {
       visibility: hidden;
@@ -79,8 +82,8 @@
                 <div class="raffle-card__info">
                   <h3 class="pq-summary__title">$10 Amazon Gift Card</h3>
                   <p class="pq-summary__line">
-                    Entries: <span id="entries-daily">0</span>/<span id="cap-daily">150</span>
-                     • Remaining: <span id="remaining-daily">150</span>
+                    Entries: <span id="entries-daily">0</span>/<span id="cap-daily"></span>
+                     • Remaining: <span id="remaining-daily"></span>
                   </p>
                   <div class="pq-summary__progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <div id="progress-daily" class="pq-summary__bar" style="width:0%"></div>
@@ -103,8 +106,8 @@
                 <div class="raffle-card__info">
                   <h3 class="pq-summary__title">$50 Gift Card</h3>
                   <p class="pq-summary__line">
-                    Entries: <span id="entries-weekly">0</span>/<span id="cap-weekly">500</span>
-                     • Remaining: <span id="remaining-weekly">500</span>
+                    Entries: <span id="entries-weekly">0</span>/<span id="cap-weekly"></span>
+                     • Remaining: <span id="remaining-weekly"></span>
                   </p>
                   <div class="pq-summary__progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <div id="progress-weekly" class="pq-summary__bar" style="width:0%"></div>
@@ -127,8 +130,8 @@
                 <div class="raffle-card__info">
                   <h3 class="pq-summary__title">Nintendo Switch OLED Model</h3>
                   <p class="pq-summary__line">
-                    Entries: <span id="entries-monthly">0</span>/<span id="cap-monthly">5000</span>
-                     • Remaining: <span id="remaining-monthly">5000</span>
+                    Entries: <span id="entries-monthly">0</span>/<span id="cap-monthly"></span>
+                     • Remaining: <span id="remaining-monthly"></span>
                   </p>
                   <div class="pq-summary__progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <div id="progress-monthly" class="pq-summary__bar" style="width:0%"></div>
@@ -156,7 +159,7 @@
               </div>
               <h3 class="pq-card__title">$10 Amazon Gift Card</h3>
               <p class="pq-card__subtitle">Perfect for any purchase on Amazon.com</p>
-              <p class="pq-card__meta">Entries: <span id="entries-daily-tab">0</span>/<span id="cap-daily-tab">150</span> • Remaining: <span id="remaining-daily-tab">150</span></p>
+              <p class="pq-card__meta">Entries: <span id="entries-daily-tab">0</span>/<span id="cap-daily-tab"></span> • Remaining: <span id="remaining-daily-tab"></span></p>
               <div class="pq-card__actions">
                 <button id="survey-daily-tab" class="pq-btn pq-btn--survey">Take Survey <span class="pq-survey-counter">(0/5)</span></button>
                 <button id="buy-daily-tab" class="pq-btn pq-btn--primary">Buy Ticket ($1.99)</button>
@@ -177,7 +180,7 @@
                      class="pq-card__prize-image" />
               </div>
               <h3 class="pq-card__title">$50 Gift Card</h3>
-              <p class="pq-card__meta">Entries: <span id="entries-weekly-tab">0</span>/<span id="cap-weekly-tab">500</span> • Remaining: <span id="remaining-weekly-tab">500</span></p>
+              <p class="pq-card__meta">Entries: <span id="entries-weekly-tab">0</span>/<span id="cap-weekly-tab"></span> • Remaining: <span id="remaining-weekly-tab"></span></p>
               <div class="pq-card__actions">
                 <button id="survey-weekly-tab" class="pq-btn pq-btn--survey">Take Survey <span class="pq-survey-counter">(0/5)</span></button>
                 <button id="buy-weekly-tab" class="pq-btn pq-btn--primary">Buy Ticket ($1.99)</button>
@@ -200,7 +203,7 @@
               </div>
               <h3 class="pq-card__title">Nintendo Switch OLED Model</h3>
               <p class="pq-card__subtitle">7-inch OLED Screen • Enhanced Audio • 64GB Storage</p>
-              <p class="pq-card__meta">Entries: <span id="entries-monthly-tab">0</span>/<span id="cap-monthly-tab">5000</span> • Remaining: <span id="remaining-monthly-tab">5000</span></p>
+              <p class="pq-card__meta">Entries: <span id="entries-monthly-tab">0</span>/<span id="cap-monthly-tab"></span> • Remaining: <span id="remaining-monthly-tab"></span></p>
               <div class="pq-card__actions">
                 <button id="survey-monthly-tab" class="pq-btn pq-btn--survey">Take Survey <span class="pq-survey-counter">(0/5)</span></button>
                 <button id="buy-monthly-tab" class="pq-btn pq-btn--primary">Buy Ticket ($1.99)</button>
@@ -411,8 +414,76 @@
   </div>
 
   </div>
-  <script src="/snake-game.js"></script>
-  <script type="module" src="/script.js"></script>
+  <script>
+    // Clear any service worker caches
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
+    
+    // Clear browser cache on load
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (let name of names) {
+          caches.delete(name);
+        }
+      });
+    }
+  </script>
+  <script>
+    // Initialize cap values from admin dashboard immediately on page load
+    (function() {
+      function initializeCaps() {
+        ['daily', 'weekly', 'monthly'].forEach(type => {
+          const stored = localStorage.getItem(`prize_${type}`);
+          if (stored) {
+            try {
+              const config = JSON.parse(stored);
+              if (config.cap !== undefined && config.cap !== null) {
+                const cap = parseInt(config.cap);
+                if (!isNaN(cap)) {
+                  // Update home tab elements
+                  const capEl = document.getElementById(`cap-${type}`);
+                  const remainingEl = document.getElementById(`remaining-${type}`);
+                  if (capEl) capEl.textContent = cap;
+                  if (remainingEl) {
+                    const entries = parseInt(localStorage.getItem('raffleState') ? JSON.parse(localStorage.getItem('raffleState'))[type]?.entries || 0 : 0) || 0;
+                    remainingEl.textContent = Math.max(0, cap - entries);
+                  }
+                  
+                  // Update tab elements
+                  const capTabEl = document.getElementById(`cap-${type}-tab`);
+                  const remainingTabEl = document.getElementById(`remaining-${type}-tab`);
+                  if (capTabEl) capTabEl.textContent = cap;
+                  if (remainingTabEl) {
+                    const entries = parseInt(localStorage.getItem('raffleState') ? JSON.parse(localStorage.getItem('raffleState'))[type]?.entries || 0 : 0) || 0;
+                    remainingTabEl.textContent = Math.max(0, cap - entries);
+                  }
+                }
+              }
+            } catch (e) {
+              console.error(`Failed to initialize cap for ${type}:`, e);
+            }
+          }
+        });
+      }
+      
+      // Run immediately when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeCaps);
+      } else {
+        initializeCaps();
+      }
+      
+      // Also run after a short delay to catch any timing issues
+      setTimeout(initializeCaps, 100);
+    })();
+  </script>
+  <script src="/snake-game.js?v=2.0"></script>
+  <script type="module" src="/script.js?v=2.0"></script>
   <script>
     // Guest mode interaction blocking
     (function() {
@@ -501,4 +572,3 @@
   </script>
 </body>
 </html>
-
